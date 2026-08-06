@@ -30,7 +30,8 @@ ARG TORCH_BUILD=347
 ENV DEBIAN_FRONTEND=noninteractive \
     WINEARCH=win64 \
     WINEPREFIX=/wineprefix \
-    WINEDEBUG=-all
+    WINEDEBUG=-all \
+    XDG_RUNTIME_DIR=/run/user/1000
 
 # i386 is required even though the server is 64-bit: the .NET 4.8 installer
 # lays down both architectures and fails without the 32-bit Wine runtime.
@@ -72,16 +73,20 @@ RUN mkdir -p /opt/steamcmd \
 # /data is created here with the right owner on purpose: Docker copies the
 # ownership of the mountpoint when it initialises an empty named volume, which
 # is what lets the container run unprivileged.
-RUN mkdir -p /wineprefix /data /opt/torch && chown -R se:se /wineprefix /data /opt/torch
+#
+# /run/user/1000 is what XDG_RUNTIME_DIR points at. Wine expects it to exist and
+# to belong to the user running it.
+RUN mkdir -p /wineprefix /data /opt/torch /run/user/1000 \
+ && chown -R se:se /wineprefix /data /opt/torch /run/user/1000 \
+ && chmod 700 /run/user/1000
+
+COPY --chown=se:se image/build-wineprefix.sh /opt/bin/
 
 USER se
 
-# The heavy step. Xvfb is needed because the .NET installer draws a window even
-# in silent mode. Torch is a WPF application: Wine Mono cannot run it, only the
-# real .NET Framework can.
-RUN xvfb-run -a wineboot --init --update \
- && xvfb-run -a winetricks -q --force dotnet48 vcrun2022 corefonts \
- && wineserver -w
+# The heavy step, around ten minutes. See the script: the order matters and one
+# of the calls needs a specific DLL override to avoid corrupting the prefix.
+RUN bash /opt/bin/build-wineprefix.sh
 
 # Torch is fetched at build time so the image is self-contained and a running
 # server never depends on the Jenkins being up. The build number travels with
