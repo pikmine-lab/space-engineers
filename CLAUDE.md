@@ -87,8 +87,24 @@ Trois choses à savoir :
 - **Un monde neuf ignore les mods à son premier démarrage** : il n'existe pas encore au moment de
   l'injection, il est créé ensuite depuis le scénario. Le premier lancement modé demande donc un
   second démarrage.
-- **`ExperimentalMode` doit passer à `true`** dans la configuration dédiée pour les scripts en jeu
-  et pour un certain nombre de mods, qui plantent sans lui.
+- **Seul le Workshop Steam est admis.** Les mods mod.io exigent le crossplay, donc `NetworkType=eos`,
+  ce qui change le réseau du serveur et met en jeu l'accès au Workshop. À rouvrir seulement si des
+  joueurs console rejoignent.
+
+`.claude/skills/check-se-mod/` porte la procédure d'examen d'un mod avant ajout, avec son outil de
+collecte. Elle existe parce que les données Steam trompent : les dépendances déclarées sont souvent
+absentes alors que la description les nomme, et le Workshop héberge sous la même forme d'URL des
+scripts in-game et des blueprints, qui n'ont rien à faire dans `<Mods>`.
+
+## Scripts
+
+Le serveur tourne en **`ExperimentalMode`**, avec **`EnableIngameScripts`** : les blocs programmables
+et les mods porteurs de code sont autorisés. Ce sont deux réglages distincts, et le second est ignoré
+sans le premier, la partie serveur traitant le scripting comme expérimental.
+
+`EnableScripterRole` reste à `false` : tout le monde peut écrire des scripts, sans promotion
+préalable. Conséquence à connaître : n'importe quel joueur peut faire tourner du code sur le serveur.
+Acceptable entre gens qui se connaissent, à revoir si le serveur s'ouvre.
 
 ## Ce qui vit hors du dépôt
 
