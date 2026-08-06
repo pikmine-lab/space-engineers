@@ -1,0 +1,5 @@
+# pnpm 11 reads its settings here rather than from package.json.
+# tsx depends on esbuild, which needs its install script to run.
+# Declaring it keeps installs non-interactive: no `pnpm approve-builds` needed.
+allowBuilds:
+  esbuild: true

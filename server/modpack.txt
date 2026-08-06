@@ -1,0 +1,21 @@
+# The modpack. One Steam Workshop id per line, comments with #.
+#
+# This file is the source of truth. The provisioner turns it into the SE_MODS
+# variable of the Dokploy service, and the container rewrites the <Mods>
+# element of the world at every start. Adding a mod is `nr provision`, not a
+# file edited over SSH.
+#
+# Order matters. When two mods change the same thing, the one further down the
+# list wins, so keep frameworks and dependencies at the top and the mods that
+# should have the final say at the bottom.
+#
+# The id is the number in the Workshop URL:
+#   steamcommunity.com/sharedfiles/filedetails/?id=1902970975
+#                                                  ^^^^^^^^^^
+#
+# Two things to know before filling this in:
+#   - A world only picks up mods on the start *after* it was created, so the
+#     very first modded run always needs a second start.
+#   - Several mods need ExperimentalMode set to true in the dedicated config.
+
+# (empty: validating the bare server first)

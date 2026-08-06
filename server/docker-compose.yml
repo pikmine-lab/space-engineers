@@ -1,0 +1,55 @@
+# Space Engineers dedicated server, deployed as a Dokploy compose service.
+#
+# Unlike the shared services in the infra repository, this one publishes ports:
+# players connect over UDP from the internet and Steam has to reach the query
+# port to list the server. There is no Traefik in front, no TLS and no internal
+# network alias, because none of that applies to a game protocol.
+#
+# The image tag comes from the provisioner rather than being written here, so
+# the deployed version is the one declared in provision/src/specs.ts.
+
+services:
+  space-engineers:
+    image: ghcr.io/pikmine-lab/space-engineers:${SE_IMAGE_TAG}
+    restart: unless-stopped
+
+    # The server saves on shutdown. Wine adds a layer between the signal and
+    # the game, so give it room; the five-minute autosave is the safety net if
+    # the save does not complete.
+    stop_grace_period: 120s
+
+    environment:
+      # Comma-separated Workshop ids, built from server/modpack.txt by the
+      # provisioner. Empty means a vanilla world.
+      SE_MODS: ${SE_MODS:-}
+      # Comma-separated Steam64 ids. Read by the provisioner from a file outside
+      # the repository, since this one is public.
+      SE_ADMINS: ${SE_ADMINS:-}
+      # Debug aid only: skips the SteamCMD update on start.
+      SE_SKIP_UPDATE: ${SE_SKIP_UPDATE:-0}
+
+    ports:
+      # Game traffic. Must match <ServerPort> in the dedicated config.
+      - "27016:27016/udp"
+      # Steam query port, how the server gets listed and found.
+      - "8766:8766/udp"
+
+    volumes:
+      # Game install, Wine-side world data and logs. The image can be replaced
+      # at will; this is what must never be dropped.
+      - se-data:/data
+
+    # Space Engineers grows with the world and does not give memory back. The
+    # cap turns a leak into one container restart instead of an out-of-memory
+    # kill somewhere else on the host.
+    mem_limit: 16g
+
+    # The server logs continuously and rotates nothing on its own.
+    logging:
+      driver: json-file
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  se-data:

@@ -1,0 +1,6 @@
+# The shell scripts are authored on Windows but run inside a Linux container.
+# Without this, a CRLF checkout makes the shebang unparseable and the container
+# exits with "no such file or directory", naming the interpreter.
+*.sh text eol=lf
+*.py text eol=lf
+Dockerfile text eol=lf

@@ -1,0 +1,16 @@
+{
+  "name": "@pikmine/space-engineers-provision",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Idempotent provisioning of the Space Engineers server on Dokploy",
+  "scripts": {
+    "provision": "tsx src/provision.ts",
+    "plan": "tsx src/provision.ts --dry-run"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "@types/node": "^24.0.0"
+  }
+}
