@@ -18,4 +18,4 @@
 #     very first modded run always needs a second start.
 #   - Several mods need ExperimentalMode set to true in the dedicated config.
 
-# (empty: validating the bare server first)
+# (empty: the planet selection is still open, see world.md for the candidates)
