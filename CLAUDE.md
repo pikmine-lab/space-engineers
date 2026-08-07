@@ -185,11 +185,36 @@ La leçon commune à ces trois pièges : **un conteneur `Up` ne prouve rien**. L
 présentaient comme un conteneur en bonne santé sans serveur dedans. Le premier réflexe de diagnostic
 est `docker exec <nom> ps -ef`, pas la lecture des journaux.
 
+## Les sauvegardes ne s'accumulent pas, c'est vérifié
+
+Un serveur Space Engineers mal réglé se remplit tout seul de sauvegardes et sature son disque en
+quelques semaines. Ce n'est pas le cas ici, et la vérification a été faite plutôt que supposée :
+autosave abaissé à une minute, `PauseGameWhenEmpty` désactivé, puis comptage. **Sept sauvegardes ont
+produit cinq dossiers de backup**, la valeur de `MaxBackupSaves`. La rotation fait son travail.
+
+Deux choses à savoir sur ce mécanisme :
+
+- **L'autosave écrase la sauvegarde courante**, il n'empile rien. Ce qui s'accumule, c'est un dossier
+  horodaté dans `Backup/` par sauvegarde, et c'est ce dossier que `MaxBackupSaves` borne.
+- **`PauseGameWhenEmpty` supprime presque toutes les sauvegardes** quand personne ne joue : le monde
+  est gelé, donc il n'y a rien à écrire. Deux sauvegardes en deux heures et demie à vide, contre une
+  par minute sous charge de test.
+
+Compter environ 300 Ko par backup sur un monde vide. Un monde peuplé pèsera bien plus, mais cinq
+backups d'un gros monde restent sans commune mesure avec les 1,9 To disponibles.
+
+Restent deux choses que le jeu ne nettoie pas seul, sans gravité aux volumes observés : les journaux
+de `Logs/` (un fichier par jour, ni compressé ni supprimé) et les minidumps, malgré
+`DeleteMiniDumps` à `true` dans `Torch.cfg`.
+
 ## Limites connues
 
-- **L'arrêt propre n'est pas garanti.** Wine s'intercale entre le `SIGTERM` de Docker et le jeu, et
-  rien ne prouve que la sauvegarde de fin aboutisse. `stop_grace_period` est à 120 s et l'autosave
-  à 5 minutes sert de filet. À vérifier sur un vrai arrêt avant de s'y fier.
+- **L'arrêt ne sauvegarde pas, c'est mesuré.** Sur un `docker restart`, le journal ne montre aucune
+  sauvegarde entre la dernière automatique et le redémarrage : les 120 s de `stop_grace_period`
+  s'écoulent, puis Docker tue le processus. **Un redémarrage coûte donc tout ce qui s'est passé
+  depuis le dernier autosave**, soit jusqu'à 5 minutes de jeu. Écrire dans `/proc/1/fd/0` ne sert à
+  rien : cela écrit *vers* le terminal sans rien injecter dans son entrée. La piste à instruire est
+  `stdin_open: true` puis l'envoi de `save` et `stop` à la console de Torch avant l'arrêt.
 - **La tenue en charge n'est pas mesurée.** La simulation de Space Engineers est essentiellement
   mono-thread et l'hôte est un EPYC virtualisé à 2,0 GHz. Ça devrait suffire à quelques joueurs,
   mais tant que rien n'a été mesuré, ce n'est qu'une hypothèse.
