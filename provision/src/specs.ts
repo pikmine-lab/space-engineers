@@ -35,5 +35,5 @@ export const SPEC: Spec = {
   serviceDescription: "Space Engineers 1 dedicated server. Publishes 27016/udp for players and 8766/udp for Steam.",
   composeFile: "server/docker-compose.yml",
   modpackFile: "server/modpack.txt",
-  imageTag: "sha-ba224e9",
+  imageTag: "sha-c1579cd",
 };
