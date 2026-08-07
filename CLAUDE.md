@@ -185,6 +185,26 @@ La leçon commune à ces trois pièges : **un conteneur `Up` ne prouve rien**. L
 présentaient comme un conteneur en bonne santé sans serveur dedans. Le premier réflexe de diagnostic
 est `docker exec <nom> ps -ef`, pas la lecture des journaux.
 
+## Quatre impasses sur l'arrêt propre, à ne pas rejouer
+
+Faire sauvegarder le serveur quand Docker l'arrête a demandé cinq tentatives. Les quatre premières
+échouent, chacune pour une raison différente, et toutes sont mesurées :
+
+| Tentative | Pourquoi ça échoue |
+|---|---|
+| `wine taskkill` sans `/F` | annonce le message de fermeture envoyé, ne fait rien : `-nogui` n'a aucune fenêtre |
+| idem, avec l'interface WPF rendue à Torch | l'interface démarre bien sous Wine, mais ne réagit pas davantage |
+| Remote API HTTP | journalise « Remote API started on port 8080 », le port écoute, aucune requête n'aboutit : elle repose sur `HttpListener`, donc `http.sys`, que Wine n'implémente pas |
+| `save` sur l'entrée standard | en `-nogui`, Torch n'installe aucune boucle de commandes, sa console ne fait qu'afficher (voir `Initializer.cs`) |
+
+Ce qui marche : **`SIGINT` au processus du jeu**, que Wine convertit en `CTRL_C_EVENT`. Le mérite ne
+revient pas à Torch, dont le code ne contient aucun gestionnaire de `Ctrl+C`.
+
+**Piège de méthode rencontré en route** : une première mesure semblait donner `taskkill` gagnant.
+L'autosave était alors à une minute pour un test sans rapport, et la sauvegarde observée était celle
+du minuteur. Devant un mécanisme de sauvegarde, toujours vérifier ce que fait l'autosave avant de
+s'attribuer le résultat.
+
 ## Les sauvegardes ne s'accumulent pas, c'est vérifié
 
 Un serveur Space Engineers mal réglé se remplit tout seul de sauvegardes et sature son disque en
@@ -209,12 +229,12 @@ de `Logs/` (un fichier par jour, ni compressé ni supprimé) et les minidumps, m
 
 ## Limites connues
 
-- **L'arrêt ne sauvegarde pas, c'est mesuré.** Sur un `docker restart`, le journal ne montre aucune
-  sauvegarde entre la dernière automatique et le redémarrage : les 120 s de `stop_grace_period`
-  s'écoulent, puis Docker tue le processus. **Un redémarrage coûte donc tout ce qui s'est passé
-  depuis le dernier autosave**, soit jusqu'à 5 minutes de jeu. Écrire dans `/proc/1/fd/0` ne sert à
-  rien : cela écrit *vers* le terminal sans rien injecter dans son entrée. La piste à instruire est
-  `stdin_open: true` puis l'envoi de `save` et `stop` à la console de Torch avant l'arrêt.
+- **L'arrêt sauvegarde, mais pas à tous les coups.** L'entrypoint envoie `SIGINT` au processus du
+  jeu, que Wine traduit en `CTRL_C_EVENT`. Observé : tantôt la séquence complète avec `world saved`
+  et une sortie propre en 61 s, tantôt aucune sauvegarde et les 210 s de `stop_grace_period`
+  épuisées. Le déterminant est probablement l'état « sale » du monde, mais **il n'a pas été isolé**,
+  donc rien ne doit être promis ici. L'autosave à 3 minutes reste le filet, et c'est lui qui borne la
+  perte réelle. À reprendre avec de vrais joueurs, où le monde change en permanence.
 - **La tenue en charge n'est pas mesurée.** La simulation de Space Engineers est essentiellement
   mono-thread et l'hôte est un EPYC virtualisé à 2,0 GHz. Ça devrait suffire à quelques joueurs,
   mais tant que rien n'a été mesuré, ce n'est qu'une hypothèse.
