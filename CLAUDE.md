@@ -150,7 +150,15 @@ jamais rien** : vider la spec laisse le serveur tourner plutôt que de perdre un
 
 Aucun port TCP n'est publié : ni Traefik, ni TLS, ni Remote API exposée.
 
-## Deux pièges rencontrés, corrigés, à ne pas réapprendre
+**Vérifié en service le 2026-08-07** : Wine 10 + .NET Framework 4.8 + Torch `v1.3.1.347` font tourner
+Space Engineers **1.210.12**. Le monde se crée depuis le scénario, le serveur atteint « Game ready »
+sans intervention, et il répond aux requêtes Steam depuis Internet sur 27016/udp en s'annonçant
+`Pikmine, 0/8 joueurs`. Consommation au repos, monde vide : **45 % d'un cœur et 1,7 Go**.
+
+Le pare-feu n'a demandé aucune règle : les ports publiés par Docker passent par la chaîne `FORWARD`,
+que `ufw` ne filtre pas ici, et non par `INPUT`.
+
+## Trois pièges rencontrés, corrigés, à ne pas réapprendre
 
 **Wine installe Mono tout seul et casse le prefix.** Laissé à lui-même, `wineboot --init` déclenche
 l'installation automatique de Mono dans un prefix à moitié construit. Elle se bloque cinq minutes,
@@ -164,6 +172,18 @@ serveur s'arrête pendant son démarrage, avant même de créer le monde. Le sym
 **le conteneur reste `Up`**, parce que `xvfb-run` attend toujours, alors que plus rien ne tourne à
 l'intérieur. D'où `tty: true` dans le compose. Devant un conteneur en vie mais un serveur injoignable,
 vérifier d'abord la liste des processus : s'il n'y a que `xvfb-run` et `Xvfb`, le jeu est mort.
+
+**`xvfb-run` ne peut pas être PID 1.** Le conteneur démarrait, Xvfb tournait, et le jeu ne se lançait
+jamais, sans une ligne de journal. L'arbre des processus donnait la réponse : `xvfb-run` restait
+bloqué en `sigsuspend`. Un processus en PID 1 ignore les signaux dont le gestionnaire est celui par
+défaut, donc le réveil que `xvfb-run` attend après avoir lancé Xvfb ne lui parvient jamais, et il
+n'exécute jamais la commande qu'on lui a confiée. L'entrypoint lance donc Xvfb lui-même puis fait
+`exec wine`. Bénéfice au passage : **le jeu est PID 1**, donc `docker stop` lui envoie `SIGTERM`
+directement au lieu de le confier à une enveloppe shell qui l'absorberait.
+
+La leçon commune à ces trois pièges : **un conteneur `Up` ne prouve rien**. Les trois se
+présentaient comme un conteneur en bonne santé sans serveur dedans. Le premier réflexe de diagnostic
+est `docker exec <nom> ps -ef`, pas la lecture des journaux.
 
 ## Limites connues
 
