@@ -24,11 +24,20 @@ const updated = (what: string, why: string) => { changes++; console.log(`  ~ upd
 const same = (what: string) => console.log(`  = unchanged ${what}`);
 const planned = (what: string, action: string) => { changes++; console.log(`  ! would ${action}: ${what}`); };
 
-/** Numeric ids, one per line or comma-separated, `#` starts a comment. Order is never touched. */
+/**
+ * Numeric ids, one per line or comma-separated, `#` starts a comment. Order is
+ * never touched.
+ *
+ * Comments are stripped line by line before splitting on commas, and not the
+ * other way round: a comma inside a comment would otherwise cut it into pieces
+ * that no longer start with `#`, and each piece would be read as an id.
+ */
 function readIds(contents: string, where: string, what: string): string[] {
   const ids = contents
-    .split(/[\n,]/)
-    .map((l) => l.replace(/#.*$/, "").trim())
+    .split("\n")
+    .map((line) => line.replace(/#.*$/, ""))
+    .flatMap((line) => line.split(","))
+    .map((s) => s.trim())
     .filter(Boolean);
 
   const bad = ids.filter((id) => !/^\d+$/.test(id));

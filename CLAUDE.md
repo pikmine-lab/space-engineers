@@ -150,6 +150,21 @@ jamais rien** : vider la spec laisse le serveur tourner plutôt que de perdre un
 
 Aucun port TCP n'est publié : ni Traefik, ni TLS, ni Remote API exposée.
 
+## Deux pièges rencontrés, corrigés, à ne pas réapprendre
+
+**Wine installe Mono tout seul et casse le prefix.** Laissé à lui-même, `wineboot --init` déclenche
+l'installation automatique de Mono dans un prefix à moitié construit. Elle se bloque cinq minutes,
+puis toute commande Wine ultérieure échoue sur `could not load kernel32.dll, status c0000135`.
+`WINEDLLOVERRIDES="mscoree=d"` sur le seul appel d'initialisation suffit à l'éviter. Mono n'est de
+toute façon pas voulu ici : Torch est une application WPF, que seul le vrai .NET Framework exécute.
+
+**Sans TTY, le serveur meurt en silence.** Space Engineers écrit ses journaux par l'API console de
+Windows. Sans pseudo-terminal, l'écriture lève `System.IO.IOException: Pipe not connected` et le
+serveur s'arrête pendant son démarrage, avant même de créer le monde. Le symptôme trompe :
+**le conteneur reste `Up`**, parce que `xvfb-run` attend toujours, alors que plus rien ne tourne à
+l'intérieur. D'où `tty: true` dans le compose. Devant un conteneur en vie mais un serveur injoignable,
+vérifier d'abord la liste des processus : s'il n'y a que `xvfb-run` et `Xvfb`, le jeu est mort.
+
 ## Limites connues
 
 - **L'arrêt propre n'est pas garanti.** Wine s'intercale entre le `SIGTERM` de Docker et le jeu, et

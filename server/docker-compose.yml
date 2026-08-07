@@ -13,6 +13,13 @@ services:
     image: ghcr.io/pikmine-lab/space-engineers:${SE_IMAGE_TAG}
     restart: unless-stopped
 
+    # Not optional. Space Engineers logs through the Windows console API, and
+    # without a pseudo-terminal that write fails with "Pipe not connected",
+    # which kills the server during startup, before it can create the world.
+    # The symptom is deceptive: the container stays up, because xvfb-run is
+    # still waiting, while nothing is running inside it.
+    tty: true
+
     # The server saves on shutdown. Wine adds a layer between the signal and
     # the game, so give it room; the five-minute autosave is the safety net if
     # the save does not complete.
