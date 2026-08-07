@@ -120,9 +120,6 @@ fi
 # PID 1, so the wake-up it waits for never arrives. Xvfb comes up, the command
 # it was supposed to run never does, and the container sits there looking
 # healthy with nothing inside it.
-#
-# Handing PID 1 to wine also means the game receives SIGTERM directly on
-# `docker stop`, instead of it being swallowed by a shell wrapper.
 Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp &
 export DISPLAY=:99
 
@@ -141,10 +138,27 @@ done
 # kernel only drops those whose handler is the default one, which is precisely
 # what left xvfb-run stuck earlier.
 
+# Torch reads commands from its standard input in console mode, and that is the
+# only working way in to ask it to save. Two other routes were tried and both
+# fail here:
+#
+#   - `wine taskkill` without /F reports success and does nothing: it posts a
+#     close message to top-level windows, and -nogui has none.
+#   - The VRage Remote API announces "Remote API started on port 8080" and the
+#     port does listen, but no request is ever answered. It is built on
+#     HttpListener, hence http.sys, which Wine does not really implement.
+#
+# The pipe is opened read-write so it neither blocks on open nor closes when a
+# writer goes away, which would hand Torch an EOF on its console.
+FIFO=/tmp/torch-console
+rm -f "${FIFO}"
+mkfifo "${FIFO}"
+exec 3<>"${FIFO}"
+
 # -noupdate: Torch is pinned by the image, it must not fetch its own build.
 cd "${SERVER}"
 log "starting Torch"
-wine Torch.Server.exe -noupdate -autostart -nogui -console &
+wine Torch.Server.exe -noupdate -autostart -nogui -console < "${FIFO}" &
 
 # `wine` hands over to start.exe, which spawns the real Torch.Server.exe as a
 # separate process. Waiting on the pid above would prove nothing: the launcher
@@ -153,16 +167,37 @@ wine Torch.Server.exe -noupdate -autostart -nogui -console &
 GAME_PATTERN='server.Torch\.Server\.exe'
 torch_running() { pgrep -f "${GAME_PATTERN}" >/dev/null 2>&1; }
 
+KEEN_LOG_DIR="${SERVER}/Logs"
+
+# Counted from the game's own log rather than trusted to a fixed delay. No awk
+# or bc: neither is guaranteed present in a slim image.
+saves_done() {
+  local n
+  n="$(cat "${KEEN_LOG_DIR}"/Keen-*.log 2>/dev/null | grep -ac 'Saving world - END' || true)"
+  echo "${n:-0}"
+}
+
 shutdown() {
-  log "stop requested, asking Torch to close and save"
-  # No /F on purpose: this sends a close request, which Torch answers by saving
-  # the world. Killing it outright is exactly what loses the session.
-  wine taskkill /IM Torch.Server.exe >/dev/null 2>&1 || true
-  for _ in $(seq 1 100); do
-    torch_running || { log "Torch closed and the world was saved"; return; }
+  local before
+  before="$(saves_done)"
+  log "stop requested, asking Torch to save"
+  printf 'save\n' >&3
+
+  # Wait for the save to actually land in the log rather than guessing a delay:
+  # this is the whole point of the exercise.
+  for _ in $(seq 1 60); do
+    [ "$(saves_done)" != "${before}" ] && { log "world saved"; break; }
     sleep 1
   done
-  log "WARNING: Torch still running after 100s, leaving it to Docker"
+  [ "$(saves_done)" = "${before}" ] && log "WARNING: no save seen after 60s, stopping anyway"
+
+  log "asking Torch to stop"
+  printf 'stop\n' >&3
+  for _ in $(seq 1 45); do
+    torch_running || { log "Torch stopped cleanly"; return; }
+    sleep 1
+  done
+  log "WARNING: Torch still running, leaving it to Docker"
 }
 trap shutdown TERM INT
 
