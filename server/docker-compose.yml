@@ -20,10 +20,11 @@ services:
     # still waiting, while nothing is running inside it.
     tty: true
 
-    # The server saves on shutdown. Wine adds a layer between the signal and
-    # the game, so give it room; the five-minute autosave is the safety net if
-    # the save does not complete.
-    stop_grace_period: 120s
+    # The entrypoint turns Docker's SIGTERM into a real shutdown, and that takes
+    # time: the save lands in seconds, but winding the process down was measured
+    # at around 80 seconds. 120s left almost no margin, so this covers the save
+    # comfortably and most of the exit. Being killed after the save is harmless.
+    stop_grace_period: 210s
 
     environment:
       # Comma-separated Workshop ids, built from server/modpack.txt by the

@@ -138,27 +138,10 @@ done
 # kernel only drops those whose handler is the default one, which is precisely
 # what left xvfb-run stuck earlier.
 
-# Torch reads commands from its standard input in console mode, and that is the
-# only working way in to ask it to save. Two other routes were tried and both
-# fail here:
-#
-#   - `wine taskkill` without /F reports success and does nothing: it posts a
-#     close message to top-level windows, and -nogui has none.
-#   - The VRage Remote API announces "Remote API started on port 8080" and the
-#     port does listen, but no request is ever answered. It is built on
-#     HttpListener, hence http.sys, which Wine does not really implement.
-#
-# The pipe is opened read-write so it neither blocks on open nor closes when a
-# writer goes away, which would hand Torch an EOF on its console.
-FIFO=/tmp/torch-console
-rm -f "${FIFO}"
-mkfifo "${FIFO}"
-exec 3<>"${FIFO}"
-
 # -noupdate: Torch is pinned by the image, it must not fetch its own build.
 cd "${SERVER}"
 log "starting Torch"
-wine Torch.Server.exe -noupdate -autostart -nogui -console < "${FIFO}" &
+wine Torch.Server.exe -noupdate -autostart -nogui -console &
 
 # `wine` hands over to start.exe, which spawns the real Torch.Server.exe as a
 # separate process. Waiting on the pid above would prove nothing: the launcher
@@ -177,27 +160,42 @@ saves_done() {
   echo "${n:-0}"
 }
 
+# SIGINT to the game process is what gets it to save and shut down in order.
+# Wine turns it into the Windows CTRL_C_EVENT, and the runtime unwinds from
+# there: nothing in Torch handles it, there is no Ctrl+C handler anywhere in its
+# source. Three other routes were tried first and all fail here:
+#
+#   - `wine taskkill` without /F reports success and does nothing. It posts a
+#     close message to top-level windows; -nogui has none, and giving Torch its
+#     WPF window back does not help either, which was measured.
+#   - The VRage Remote API logs "Remote API started on port 8080" and the port
+#     really listens, but no request is ever answered: it stands on
+#     HttpListener, hence http.sys, which Wine does not meaningfully implement.
+#   - Writing `save` on the console does nothing: in -nogui Torch installs no
+#     command loop at all, its console only prints. That is in Initializer.cs.
 shutdown() {
-  local before
+  local before pid
   before="$(saves_done)"
-  log "stop requested, asking Torch to save"
-  printf 'save\n' >&3
+  pid="$(pgrep -f "${GAME_PATTERN}" | head -1)"
+  log "stop requested, sending SIGINT to Torch (pid ${pid:-unknown})"
+  [ -n "${pid}" ] && kill -INT "${pid}" 2>/dev/null || true
 
-  # Wait for the save to actually land in the log rather than guessing a delay:
-  # this is the whole point of the exercise.
+  # The save lands within seconds and is the part that matters, so it is waited
+  # on explicitly instead of trusting a fixed delay.
   for _ in $(seq 1 60); do
     [ "$(saves_done)" != "${before}" ] && { log "world saved"; break; }
     sleep 1
   done
-  [ "$(saves_done)" = "${before}" ] && log "WARNING: no save seen after 60s, stopping anyway"
+  [ "$(saves_done)" = "${before}" ] && log "WARNING: no save seen after 60s"
 
-  log "asking Torch to stop"
-  printf 'stop\n' >&3
-  for _ in $(seq 1 45); do
-    torch_running || { log "Torch stopped cleanly"; return; }
+  # Winding the process down is far slower than saving: measured at around 80
+  # seconds. Worth waiting for a clean exit, but the world is already safe by
+  # this point, which is why stop_grace_period only has to cover the save.
+  for _ in $(seq 1 120); do
+    torch_running || { log "Torch exited cleanly"; return; }
     sleep 1
   done
-  log "WARNING: Torch still running, leaving it to Docker"
+  log "WARNING: Torch still running, leaving the rest to Docker"
 }
 trap shutdown TERM INT
 
