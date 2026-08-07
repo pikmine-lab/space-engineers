@@ -321,8 +321,21 @@ Ignis, Torvion, Umbris et Argus viennent de la même main, toutes mises à jour 
 
 ## Ce qui reste à faire
 
-- **Trancher le mode de jeu.** Le monde et le serveur sont en `Creative`. Tout l'étagement des
-  gravités, des minerais et des distances ne devient un parcours de progression qu'en `Survival`.
+- **Basculer en `Survival`.** La cible est décidée : ce système sera joué en survie, et c'est ce qui
+  donne son sens à l'étagement des gravités, des minerais et des distances. `Creative` est maintenu le
+  temps des tests, sur le monde local comme sur le serveur, et se bascule dans les paramètres avancés
+  du monde une fois la géométrie éprouvée.
+- **Choisir les rencontres.** Modular Encounters Systems `1521905890` est le socle retenu : framework
+  de spawn très vivant (432 000 abonnés, 30 Mo, maintenu par enenra et CptArthur depuis la retraite de
+  Meridius_IX). Il gère neuf types de spawn, du cargo spatial à la rencontre de boss, et **désactive
+  de lui-même** Cargo Ships, Random Encounters, Wolves et Spiders pour les remplacer. Mais il
+  **n'apporte aucun contenu seul** : tout dépendra des mods de rencontres posés dessus, qui restent à
+  examiner. Il va en tête du modpack, avant eux.
+  Deux points de vigilance : le message `Reference issue detected (circular reference or wrong order)`
+  qui fait échouer le téléchargement des mods sur certains serveurs dédiés se soigne par la mise à jour
+  des DLL Steam, que l'entrypoint fait déjà, et par Torch, que nous utilisons. Et
+  `AutodetectDependencies=true` est le mécanisme qui produit ce genre de boucle quand plusieurs mods
+  déclarent le même framework : à repasser à `false` si le symptôme apparaît.
 - **Aligner `modpack.txt`** sur les douze mods, dans l'ordre, frameworks en tête. L'entrypoint
   réécrit l'élément `<Mods>` du monde à chaque démarrage depuis ce fichier : si les deux divergent, le
   monde se casse au déploiement.
