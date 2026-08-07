@@ -114,8 +114,25 @@ else
 fi
 
 # --- 7. Run ------------------------------------------------------------------
+# Xvfb is started by hand rather than through xvfb-run, and that is not a matter
+# of taste. As PID 1, the xvfb-run script blocks forever in sigsuspend: the
+# kernel drops signals whose handler is the default one when they are sent to
+# PID 1, so the wake-up it waits for never arrives. Xvfb comes up, the command
+# it was supposed to run never does, and the container sits there looking
+# healthy with nothing inside it.
+#
+# Handing PID 1 to wine also means the game receives SIGTERM directly on
+# `docker stop`, instead of it being swallowed by a shell wrapper.
+Xvfb :99 -screen 0 1280x1024x24 -nolisten tcp &
+export DISPLAY=:99
+
+for _ in $(seq 1 30); do
+  [ -e /tmp/.X11-unix/X99 ] && break
+  sleep 1
+done
+[ -e /tmp/.X11-unix/X99 ] || { log "FATAL: Xvfb did not come up"; exit 11; }
+
 # -noupdate: Torch is pinned by the image, it must not fetch its own build.
-# xvfb: Torch is a WPF application and needs a display even with -nogui.
 cd "${SERVER}"
 log "starting Torch"
-exec xvfb-run -a wine Torch.Server.exe -noupdate -autostart -nogui -console
+exec wine Torch.Server.exe -noupdate -autostart -nogui -console
