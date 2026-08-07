@@ -63,14 +63,40 @@ description. Un dépôt en dit plus qu'une page Steam : date du dernier commit, 
 mentionnant la version courante, présence de correctifs non encore publiés. Un mod dont la page
 Steam semble morte mais dont le dépôt bouge n'est pas le même risque qu'un mod mort des deux côtés.
 
+**Compter les voxels d'un mod de planète.** C'est le seul critère qui puisse invalider une sélection
+entière, et il est **silencieux** : le jeu ne supporte que **128 matériaux voxel actifs**, sur une
+structure de 8 bits, et au-delà les planètes affichent de la pierre d'astéroïde partout tandis que
+les minerais perdent leurs textures. Aucune erreur, aucun message. Keen a classé la demande
+d'augmentation en « Considered (Not Planned) » après quatre ans.
+
+Le vanilla en occupe déjà **62** (19 pour les astéroïdes, 43 pour le planétaire), ce qui laisse **66
+emplacements** pour l'ensemble des mods. Presque aucun auteur ne chiffre sa consommation, et ceux qui
+la mentionnent se contentent d'un « custom voxels » sans nombre : elle se **mesure**, elle ne se lit
+pas.
+
+La mesure demande d'être abonné au mod. Compter, dans les `.sbc` du dossier téléchargé, les
+`VoxelMaterialDefinition` dont le `SubtypeId` n'existe pas déjà dans `Content/Data/VoxelMaterials*.sbc`
+du jeu. Un matériau qui surcharge un matériau vanilla ne coûterait rien, mais en pratique les mods de
+planètes ajoutent au lieu de surcharger. Les ordres de grandeur observés vont de 0 à 12 par planète,
+sans corrélation avec le poids du mod : une planète de 109 Mo peut ne rien coûter quand une autre en
+consomme neuf.
+
+**Le piège** : un mod actif consomme ses emplacements **même si sa planète n'est jamais posée**, les
+définitions étant chargées au démarrage du monde. Renoncer à une planète ne libère rien ; il faut
+retirer son mod.
+
 ## 3. Conflits
 
 Il n'existe aucune source de données sur les incompatibilités. Ce qui est réellement détectable :
 
-- **Le même framework sous plusieurs identifiants.** WeaponCore existe en `1918681825` et en
-  `3154371364` (« 3.0 »). Deux mods du pack peuvent pointer chacun sur un identifiant différent, et
-  charger les deux est une collision franche. À chaque ajout, vérifier qu'aucune dépendance du pack
-  n'est une autre version d'un mod déjà présent.
+- **Le même framework sous plusieurs identifiants.** Un framework republié change d'identifiant, et
+  les mods qui en dépendent ne suivent pas tous. WeaponCore en est le cas d'école : `1918681825` et
+  `2496225055` (« CoreSystems ») ont **disparu du Workshop**, seul `3154371364` (« 3.0 ») subsiste.
+  D'où deux risques, et le second est le plus fréquent : charger deux versions du même framework est
+  une collision franche, et une dépendance déclarée peut pointer vers un identifiant **mort**, que le
+  serveur ne pourra jamais télécharger. À chaque ajout, résoudre les dépendances déclarées *et*
+  citées, et vérifier qu'elles répondent encore : l'outil ne teste que les identifiants qu'on lui
+  passe, pas ceux qu'il découvre.
 - **Deux mods qui remplacent la même chose.** Deux remplaçants d'armes vanilla, deux jeux de
   vaisseaux de réapparition, deux surcouches d'un même bloc : c'est le dernier de la liste qui
   gagne, l'autre est chargé pour rien et parfois à moitié.
