@@ -1,214 +1,334 @@
 # Le monde
 
 Le serveur ne joue pas un scénario livré avec le jeu : il joue un **système solaire composé à la
-main**. Ce document porte la conception de ce système, le registre des mods candidats, et les
-raisons des choix. Il existe parce que le monde est la seule partie du serveur que le dépôt ne peut
-pas entièrement décrire : les positions des planètes vivent dans un fichier binaire de sauvegarde,
-pas dans du code.
+main**, construit sur un poste de jeu puis déposé dans le volume `se-data`. Ce document décrit ce
+système, les mécaniques qui le gouvernent, et les décisions prises pour y arriver.
 
-`modpack.txt` dit *ce qui tourne sur le serveur*. Ce fichier dit *ce qui est envisagé*, et pourquoi.
+Il existe parce que le monde est la seule partie du serveur que le dépôt ne peut pas décrire
+entièrement : les positions des corps vivent dans un fichier de sauvegarde binaire, pas dans du code.
+`modpack.txt` dit *quels corps sont disponibles*, ce fichier dit *pourquoi et où*.
 
-**État : collecte des candidats.** Rien n'est sélectionné. Les tableaux ci-dessous s'allongent à
-mesure que des planètes sont proposées, et la sélection se fera en une passe, quand la collecte sera
-close.
+**État : le système est composé, le monde n'est pas encore déployé.**
 
-## Le monde se construit en local, pas sur le serveur
+## Le monde se construit en local
 
-Une planète ne se place qu'avec les outils créatifs, depuis le menu de spawn (`Shift+F10`), en
-caméra spectateur. C'est un geste de jeu, pas une configuration. Le monde est donc **construit sur
-un poste de jeu**, puis déposé dans le volume `se-data`.
+Une planète ne se place qu'avec les outils créatifs, depuis le menu de spawn (`Shift+F10`), en caméra
+spectateur. C'est un geste de jeu, pas une configuration. Le dépôt ne reconstruit donc pas ce monde à
+partir de rien : il en décrit l'intention, et le monde initial est déposé une fois.
 
-Conséquence à assumer : le dépôt ne reconstruit pas ce monde à partir de rien. Il en décrit
-l'intention, et le monde initial est déposé une fois.
+Le monde de référence est `Monde vide 2026-08-07 14-56`, parti du preset **Empty World**.
 
-## Les candidats : le corps
+## Le système
 
-Les auteurs annoncent des **diamètres**, alors que le fichier de sauvegarde stocke des **rayons**.
-Le menu de spawn plafonne à 120 km de diamètre : toute planète annoncée au-dessus demande un outil
-externe.
+Kerbin est à l'origine parce que c'est la planète de départ : toutes les coordonnées se lisent comme
+des distances depuis chez soi. Les sauts comptent des bonds de jump drive vanilla, 2000 km.
 
-La colonne des voxels est vide parce qu'aucun auteur ne la chiffre. Elle se remplit en comptant les
-`VoxelMaterialDefinition` dans les fichiers du mod, une fois celui-ci téléchargé par abonnement.
-C'est la mesure qui décidera de la taille possible de la sélection.
+| Corps | Diamètre | Position | Distance de Kerbin | Sauts |
+|---|---|---|---|---|
+| **Kerbin** | 120 km | `0, 0, 0` | — | départ |
+| ↳ Moon *(vanilla)* | 28 km | `60 000, 150 000, -253 000` | 300 km | vol direct |
+| Titan *(vanilla)* | 36 km | `-1 351 000, 553 000, -556 000` | 1 562 km | 1 |
+| **Satreus** | 60 km | `-1 526 000, 628 000, -718 000` | 1 800 km | 1 |
+| Umbris | 45 km | `2 379 000, 132 000, 1 214 000` | 2 674 km | 2 |
+| **Géante gazeuse** | 360 km | `2 830 000, 403 000, 484 000` | 2 899 km | 2 |
+| Torvion | 50 km | `2 950 000, -499 000, -298 000` | 3 007 km | 2 |
+| Tohil | 19 km | `3 251 000, 754 000, 49 000` | 3 338 km | 2 |
+| Moon *(vanilla)* | 23 km | `621 000, -4 213 000, -768 000` | 4 327 km | 3 |
+| **Nivis** | 120 km | `786 000, -4 318 000, -996 000` | 4 501 km | 3 |
+| **Argus** | 120 km | `-1 060 000, -1 556 000, 5 909 000` | 6 202 km | 4 |
+| **Ignis** | 120 km | `3 077 000, 7 648 000, -3 077 000` | **8 799 km** | **5** |
 
-| Candidat | Diamètre | Gravité | Atmosphère | Minerais | Voxels |
+Douze corps, dont trois vanilla qui ne coûtent **ni voxel ni téléchargement** : deux Moon de tailles
+différentes et un Titan. `MaxPlanets` compte les *types* de planètes, pas les instances, d'où la
+possibilité de poser deux Moon sans payer deux fois.
+
+### La lecture du système
+
+Kerbin est le carrefour : un saut vers Satreus, deux vers le système gazeux, trois vers Nivis, quatre
+vers Argus, cinq vers Ignis. La difficulté croît avec la distance, et les deux mondes extrêmes sont
+dans des quarts de ciel opposés, à 127,7° l'un de l'autre vus depuis Kerbin et 13 512 km l'un de
+l'autre, soit sept sauts en direct.
+
+**Les couples planète-lune**, tous atteignables sans jump drive :
+
+| Planète | Lune | Écart | Marge surface à surface | Lune vue du sol | Vol direct |
 |---|---|---|---|---|---|
-| Orlunda `2873186053` | 120 km | 1.12 g | 0.89 atm, respirable | tous, U et Pt | ? |
-| Ignis `3343005457` | 120 km | 1.08 g | 0.85 atm, 0 % O₂ | tous sauf U | ? |
-| Kerbin `2941085186` | 120 km | n.c. | n.c. | répartis par zones | ? |
-| Argus `3146087212` | 120 km | 1.45 g | 5 % O₂ | tous, U et Pt, **+ Hydronite** | ? |
-| Miasma `3617496051` | 120 km | 1.2 g | 1.1 atm | tous sauf U | ? |
-| Nivis `3684013414` | 120 km | n.c. | n.c. | tous, U et Pt | déclarés |
-| Tharsis `3262558921` | 120 km | 0.75 g | 0.85 atm, 5 % O₂ | tous sauf U | ? |
-| Mythu `3654267020` | 67 km | 0.63 g | aucune | tous, U et Pt | déclarés |
-| Satreus `2266665708` | 60 km | 0.95 g | 0.9 atm, respirable | tous sauf U | ? |
-| Tibur `3617040986` | 60 km | 0.5 g | 0.8 atm | tous, U et Pt | ? |
-| Torvion `3028355567` | 50 km | 0.7 g | 1 atm, O₂ faible | tous, U et Pt | ? |
-| Umbris `3118433062` | 45 km | 0.19 g | aucune | tous sauf U | ? |
-| Tohil `2296726670` | 19 km | 0.33 g | 0.5 atm | tous sauf U et Pt | ? |
-| Luma `2286318683` | 900 km | 1.86 g | 1 atm | glace seule | ? |
-| Real Gas Giants `3232085677` | libre | conf. | conf. | 3 au choix | ? |
+| Kerbin | Moon 28 km | 300 km | 226 km | 5,4° | 50 min |
+| Satreus | Titan 36 km | 250 km | 202 km | **8,2°** | 42 min |
+| Nivis | Moon 23 km | 300 km | 229 km | 4,4° | 50 min |
 
-## Les candidats : faune, météo et suivi
+Pour référence, la Lune vue de la Terre fait 0,52°.
 
-`n.c.` veut dire non communiqué par l'auteur, ce qui n'équivaut pas à « aucune ». Une fiche muette
-sur la faune ne prouve pas qu'il n'y en a pas.
+**Les satellites de la géante** sont répartis en profondeur, dans trois directions distinctes :
 
-| Candidat | Faune | Météo | Nourriture | Poids | Abonnés | MAJ |
-|---|---|---|---|---|---|---|
-| Orlunda | n.c. | aucun danger déclaré | oui | 186 Mo | 7 700 | 2025-12 |
-| Ignis | aucune | canicules, pluies de cendre, vent faible | non | 167 Mo | 8 175 | 2025-09 |
-| Kerbin | n.c. | n.c. | n.c. | 109 Mo | 1 306 | 2026-05 |
-| Argus | aucune | **six types, dont pluie corrosive, tempête radioactive et un « Cataclysm »**, vent fort | non | 176 Mo | 3 794 | 2025-09 |
-| Miasma | n.c. | aucun danger déclaré | oui | **588 Mo** | 5 216 | 2025-12 |
-| Nivis | **Petrified Sabiroids** renforcés | tempêtes de neige, de grêle et de cendre, annoncées dangereuses | n.c. | 396 Mo | 2 795 | 2026-03 |
-| Tharsis | aucune | tempêtes de poussière, vent faible | non | 145 Mo | 2 202 | 2025-09 |
-| Mythu | n.c. | n.c. | non | 162 Mo | 868 | 2026-01 |
-| Satreus | **araignées nocturnes** | tempêtes de sable, légèrement dangereuses | oui, sur les plateaux | 180 Mo | 21 412 | 2025-12 |
-| Tibur | n.c. | aucun danger déclaré | non | 109 Mo | 3 032 | 2025-12 |
-| Torvion | aucune | **orages électriques**, vent fort | n.c. | 110 Mo | 1 288 | 2025-09 |
-| Umbris | n.c. | aucune, planète sans atmosphère | n.c. | **36 Mo** | 2 203 | 2025-09 |
-| Tohil | n.c. | aucune, radiation solaire réduite | non | 60 Mo | 9 565 | 2025-09 |
-| Luma | n.c. | températures élevées, pas de radiation | non | 124 Mo | 13 703 | 2025-09 |
-| Real Gas Giants | aucune | zones de profondeur à dégâts progressifs, configurables | non | 334 Mo | 34 691 | 2026-01 |
+| Satellite | Distance du centre | Rayon projeté dans le plan de l'anneau | Hauteur au-dessus du plan |
+|---|---|---|---|
+| Tohil | 700 km | 612 km, **dans la zone annulaire** | +339 km |
+| Umbris | 900 km | 864 km, hors zone | -252 km |
+| Torvion | 1 200 km | 768 km, hors zone | -922 km |
 
-Real Gas Giants n'est pas une planète mais un moteur : il déclare trois dépendances obligatoires,
-Text HUD API `758597413`, Visual Overrides API `3222232482` et Asteroid Filter API `3218645300`,
-soit 3 Mo au total.
+Tohil ne traverse pas l'anneau, il le **survole** à 339 km au-dessus de son plan, et y gagne le plus
+beau point de vue du système : l'anneau y occupe **91° de ciel**. L'épaisseur réelle de l'anneau
+(`RingLayerSpacingScale`) n'est pas documentée en mètres, donc ce dégagement n'est pas garanti par le
+calcul. Si des astéroïdes apparaissent autour de Tohil, c'est qu'il est dans la zone et il faut
+l'écarter vers 1 000 km.
 
-## Ce que la configuration du serveur neutralise déjà
+## La géante gazeuse a deux tailles
 
-C'est le point le plus important à savoir avant de choisir sur la faune et la météo : **une partie
-de ce que ces mods promettent ne se produira pas**, à cause de réglages déjà en place.
+Son **noyau voxel** ne fait que 9,5 km de rayon, ce que le menu de spawn a créé. Mais le mod dessine
+par-dessus une enveloppe de **180 km de rayon**, définie par le champ `Radius` de son `Config.xml` et
+exprimée en kilomètres. C'est ce qui explique qu'on puisse se retrouver « dans » la géante en la
+croyant petite.
 
-| Réglage actuel | Effet sur les candidats |
-|---|---|
-| `EnableSpiders=false` | supprime les araignées de Satreus **et** les Petrified Sabiroids de Nivis, avec leur butin d'uranium |
-| `EnableWolfs=false` | supprime toute faune terrestre du même type |
-| `EnableEncounters=false` | supprime les rencontres ajoutées par Satreus, Tohil, Luma et Orlunda |
-| `WeatherSystem=true` | la météo fonctionne, les effets visuels et les vents sont actifs |
-| `WeatherLightingDamage=false` | **annule les dégâts de foudre**, donc les six météos d'Argus qui passent toutes par ce système, et probablement une partie de celles de Torvion et Nivis |
-| `EnvironmentHostility=SAFE` | réduit l'hostilité générale de l'environnement |
+**Son anneau est bien plus large que le défaut documenté.** La commande `/RGG.AddRing` a généré un
+`RingOuterScale` de **3,98** là où la documentation annonce 2,5 :
 
-Autrement dit, dans l'état actuel, les planètes-défi perdent leur défi. Argus est le cas extrême :
-son auteur écrit explicitement que ses météos reposent sur le système de foudre. Chacun de ces
-réglages peut être changé, mais **ils sont globaux au monde** : activer les dégâts de foudre pour
-Argus les active partout.
-
-### Les réglages globaux réclamés par un seul candidat
-
-| Candidat | Réglage exigé | Portée du dégât collatéral |
+| | Multiplicateur | Rayon |
 |---|---|---|
-| Argus | `WeatherLightingDamage=true` | la foudre devient dangereuse sur toutes les planètes |
-| Orlunda | rotation du soleil désactivée, `SunDirectionNormalized` à `x=0 y=-1 z=0` | tout le système perd son cycle jour/nuit |
-| Nivis, Satreus | `EnableSpiders=true` | faune hostile réintroduite partout |
+| Bord intérieur | 1,10 | 198 km |
+| Bord extérieur | **3,98** | **716 km** |
 
-Un candidat qui perd son concept sans son réglage reste utilisable : Orlunda garde sa géographie et
-ses minerais, Argus garde son relief et son uranium. Ce sont des choix d'ambiance, pas des blocages.
+L'ensemble occupe donc 716 km de rayon, 1 432 km de diamètre : le plus gros objet du système, et de
+loin. Vu depuis Kerbin à 2 899 km, il fait **27,7°** de diamètre apparent.
 
-## Réserves particulières
+`ConstrainNearbyAsteroidsToRing` est à `true`, donc les astéroïdes de la zone sont concentrés dans
+l'anneau plutôt que dispersés autour. Combiné à la densité procédurale, l'anneau devient une vraie
+ceinture minière.
 
-- **Luma** : son auteur annonce lui-même, en titre de page, des problèmes en multijoueur dus à ses
-  fichiers de nuages haute résolution, non corrigeables de son côté. Son diamètre recommandé de
-  900 km dépasse par ailleurs la limite du menu de spawn. Deux réserves indépendantes.
-- **Argus** : introduit un minerai, **Hydronite**, qui se comporte comme la glace en moins
-  volumineux. Un minerai supplémentaire consomme des emplacements de voxel en plus de ceux de sa
-  surface. Elle apporte aussi son propre véhicule de réapparition.
-- **Nivis** : son auteur reconnaît un coût en particules, dit l'avoir réduit, et **propose une
-  version à météo vanilla sur demande** si les machines modestes souffrent. Licence restrictive,
-  sans conséquence pour un usage sur serveur.
-- **Mythu** : le moins éprouvé du lot avec 868 abonnés.
-- **Kerbin** : livre deux variantes, une vanilla et une prête pour le Water Mod. La variante vanilla
-  est celle à faire apparaître. Sa géographie est dessinée autour d'océans, donc à sec ses îles
-  deviennent des plateaux entourés de fosses.
-- **Miasma** : ses marais sont du relief et de la texture, pas du liquide. Sans le Water Mod, écarté,
-  c'est un marais sec. Deuxième plus lourd du registre.
-- **Umbris** : publiée comme la lune de **Valkor** `3112058236`, planète non encore examinée. Rien
-  ne couple techniquement les deux, la lune se pose où on veut.
-- **Torvion** : annoncée comme lune, mais 0.7 g et 1 atm lui donnent un profil de planète.
-- **Real Gas Giants** : mod porteur de code, du même auteur que trois items disparus du Workshop en
-  juillet 2026. Il n'exige ni Real Stars ni Real Solar Systems.
+**Les ressources collectables**, par bloc collecteur externe :
 
-Ignis, Tharsis, Torvion, Umbris et Argus viennent de la même main, toutes mises à jour le
-8 septembre 2025, avec des fiches au format identique. Tibur et Miasma partagent un autre auteur.
+| Zone | Ressource | Quantité par cycle |
+|---|---|---|
+| Anneau | `Iron,Iron,Iron,Nickel,Nickel,Nickel,Silicon,Silicon,Gold` pondéré 40/30/20/10 % | 100 |
+| Haute atmosphère | Ice | 1 000 |
+| Basse atmosphère | Silicon | 1 000 |
 
-## Écartés, et pourquoi
+Un cycle vaut cinq secondes par collecteur. Les seuils de profondeur : sous 82 % du rayon les
+ressources basses commencent à apparaître, sous 78 % elles sont seules.
+
+**Réserve sur la pondération** : un joueur rapporte dans la discussion du mod que seule la première
+entrée de la liste est réellement collectée, malgré les poids, et l'échange s'arrête sans résolution.
+À vérifier au premier collecteur posé. Le repli est une ressource unique par zone.
+
+**Modifier la config de la géante** demande de passer `OverrideFromConfig` à `true`, et **il repasse à
+`false` de lui-même à la sauvegarde suivante** : c'est un déclencheur à usage unique, pas un
+interrupteur. Le fichier déclare par ailleurs `encoding="utf-16"` alors qu'il est physiquement en
+UTF-8 sans BOM. Cette incohérence vient du mod : la laisser telle quelle, c'est ce qu'il relit.
+
+## Les astéroïdes
+
+`ProceduralDensity` vaut **0.35**, la densité « Infinite Normal » qu'utilise Keen sur ses propres
+serveurs, sur une échelle de 0 à 1. Le champ était **absent** du monde, ce qui équivaut à 0, et à
+zéro aucun astéroïde n'apparaît jamais.
+
+Les astéroïdes procéduraux sont générés à la volée autour des joueurs et détruits quand on s'éloigne.
+Ils sont en nombre pratiquement infini et **ne consomment pas de mémoire** : seuls ceux qu'un joueur
+creuse deviennent des fichiers dans la sauvegarde.
+
+**`ProceduralSeed` est figé à 0 et ne doit plus jamais changer.** Modifier cette graine déplacerait
+tous les astéroïdes du monde, y compris ceux abritant une base. Elle a été écrite pendant que le monde
+n'en contenait aucun, ce qui était le seul moment sûr.
+
+Un filtre installé automatiquement par Real Gas Giants complète le dispositif :
+
+```xml
+<AsteroidFilterInfo Name="RemoveNearGasGiant" Priority="10" />
+```
+
+Aucun astéroïde n'apparaît à l'intérieur de la géante.
+
+## Le modpack retenu
+
+| Mod | Rôle | Voxels | Poids |
+|---|---|---|---|
+| Text HUD API `758597413` | dépendance RGG | 0 | 1 Mo |
+| Visual Overrides API `3222232482` | dépendance RGG | 0 | 1 Mo |
+| Asteroid Filter API `3218645300` | dépendance RGG | 0 | 1 Mo |
+| Real Gas Giants `3232085677` | moteur de géante gazeuse | **0** | 334 Mo |
+| Kerbin `2941085186` | départ, variante **vanilla** | **0** | 109 Mo |
+| Umbris `3118433062` | satellite | 1 | 36 Mo |
+| Torvion `3028355567` | satellite | 1 | 110 Mo |
+| Ignis `3343005457` | monde en fusion, le plus lointain | 5 | 167 Mo |
+| Tohil `2296726670` | satellite | 5 | 60 Mo |
+| Argus `3146087212` | l'enfer, quatre sauts | 6 | 176 Mo |
+| Satreus `2266665708` | second monde respirable | 8 | 180 Mo |
+| Nivis `3684013414` | monde gelé, trois sauts | 8 | 396 Mo |
+
+Douze mods, **34 emplacements de voxel**, environ **1,53 Go** à télécharger au premier join.
+
+### Le budget voxel
+
+Space Engineers ne supporte que **128 matériaux voxel actifs**, sur une structure de 8 bits. Keen a
+classé la demande d'augmentation en « Considered (Not Planned) » après quatre ans et plus de deux
+cents votes.
+
+| | |
+|---|---|
+| Vanilla | 62 (19 astéroïdes, 43 planétaire) |
+| Les douze mods | 34 |
+| **Total** | **96 / 128** |
+| **Marge** | **32 emplacements** |
+
+Le dépassement est **silencieux** : aucune erreur, les planètes affichent de la pierre d'astéroïde
+partout et les minerais perdent leurs textures. C'est pourquoi le décompte des voxels est un critère
+d'examen à part entière dans `.claude/skills/check-se-mod/`.
+
+**Un mod actif consomme ses emplacements même si sa planète n'est pas posée** : les définitions sont
+chargées au démarrage du monde. Retirer une planète du système veut donc dire retirer son mod, pas
+seulement renoncer à la placer. C'est ce qui a libéré 28 emplacements en abandonnant cinq candidats.
+
+## L'environnement, tranché
+
+Tous ces réglages sont **globaux au monde**. Aucun ne s'applique à une planète en particulier, donc
+en activer un pour un corps l'active pour tous. Ils vivent en double : dans `Sandbox.sbc` (le
+checkpoint) et dans `Sandbox_config.sbc` (le sous-ensemble que le serveur lit sans charger le monde).
+Les deux doivent concorder.
+
+| Réglage | Valeur | Ce qu'il apporte |
+|---|---|---|
+| `WeatherLightingDamage` | `true` | les météos d'Argus, Torvion et Nivis passent par le système de foudre pour infliger leurs dégâts. Sans lui, les six tempêtes d'Argus ne font strictement rien. Contrepartie : la foudre devient mortelle partout |
+| `EnvironmentHostility` | `NORMAL` | une vague de météorites toutes les 30 à 60 min, la première à 30 min. Ne gouverne que ça |
+| `SolarRadiationIntensity` | `1` | allume le gradient de radiation. Valeur neutre d'un multiplicateur, **non mesurée** : à calibrer en jeu |
+| `EnableSunRotation` | `true` | le cycle jour/nuit est un acquis, avec son intervalle de 120 min |
+| `EnableSpiders`, `EnableWolfs`, `EnableEncounters` | `false` | supprime la faune de Satreus et Nivis, et les rencontres. Laissé en l'état |
+| `EnableEconomy` | `false` | à n'activer qu'une fois la géométrie figée |
+
+### Le mécanisme de radiation a quatre niveaux
+
+| Niveau | Réglage | Portée |
+|---|---|---|
+| Le mécanisme | `EnableRadiation` | global, actif |
+| L'intensité au soleil | `SolarRadiationIntensity` | global, à 1 |
+| La protection d'une planète | `SolarRadiationProtectionFactor` | **par planète** |
+| L'émission propre d'une planète | `RadiationGain` | **par planète** |
+
+Valeurs vanilla relevées dans `PlanetGeneratorDefinitions.sbc` : EarthLike, Alien et Titan protègent
+à 1.8, Mars à 0.2, et **Europa à 0** avec une émission propre de 0,6 par seconde, commentée dans le
+fichier « No protection from solar radiation ».
+
+**Une planète mortelle sans protection, c'est la planète qui le décide**, par son `RadiationGain`.
+Aucun réglage global ne peut rendre radioactive une planète qui ne l'a pas déclaré. Ce que le réglage
+global apporte, c'est le gradient : les mondes mal protégés deviennent dangereux au soleil, les mondes
+bien protégés restent vivables. Les deux paramètres sont visibles, la formule de leur combinaison ne
+l'est pas : le gradient est certain, son ampleur non.
+
+Les météos vanilla portent un `RadiationGain` **négatif** (`-0.6` pour pluies, brouillards et orages,
+plage `[-100, 100]`), donc elles protègent du soleil. S'abriter d'une tempête a un sens mécanique.
+
+### Un réglage refusé
+
+Orlunda réclamait la **désactivation de la rotation du soleil** pour que son verrouillage de marée
+soit fidèle. Refusé : tout le système aurait perdu son cycle jour/nuit pour un effet sur une seule
+planète. Elle a finalement été écartée pour d'autres raisons.
+
+## Les mécaniques à ne pas réapprendre
+
+### Déplacer un corps, jamais le redimensionner
+
+La position d'une planète vit dans `SANDBOX_0_0_0_.sbs` comme un simple attribut, indépendamment de
+son fichier `.vx2`. La déplacer ne touche pas son terrain. **Son rayon, en revanche, est encodé dans
+le nom du fichier voxel** (`Kerbin-1119735009d120000.vx2`, où `d120000` est le diamètre) et ne se
+change jamais après coup : la taille se choisit définitivement au spawn.
+
+D'où la méthode de travail : poser tous les corps **en grappe serrée près de l'origine**, sans
+voyager, puis les disperser en écrivant leurs coordonnées. Le `.sbsB5` est supprimé après chaque
+écriture, il restaurerait l'état précédent au chargement.
+
+Ces fichiers sont écrits par le jeu : les modifier par **substitution de texte**, jamais par un aller
+et retour dans un sérialiseur XML, qui réordonnerait les attributs et réécrirait les namespaces. Et
+l'ordre des éléments compte : le sérialiseur .NET les lit en séquence, donc un élément inséré au
+mauvais endroit corrompt le monde sans que rien ne le signale avant longtemps.
+
+### L'axe solaire de l'Empty World est de travers
+
+L'Empty World part avec un axe incliné d'environ 45°, là où le preset *Star System* l'a à plat. Les
+cycles jour/nuit en dépendent. Corrigé sur ce monde, valeurs copiées du Star System :
+
+| Fichier | Valeurs posées |
+|---|---|
+| `Sandbox.sbc` | `BaseSunDirection` et `SunDirectionNormalized` à `x=0 y=0 z=1` |
+| `SANDBOX_0_0_0_.sbs` | `SunAzimuth` à `3.14159274`, `SunElevation` à `0` |
+
+`SunDirectionNormalized` est recalculé en continu par le jeu, seul `BaseSunDirection` compte vraiment.
+
+### Se déplacer dans un système de 8 800 km
+
+| Touche | Effet |
+|---|---|
+| `F8` | caméra spectateur libre |
+| **`Shift` + molette** | débride la vitesse de la caméra |
+| `Ctrl` + molette | vitesse de rotation de la vue |
+| **`Alt+F10` → Entity list → Planets** | téléporte la caméra à la planète choisie |
+| **`Ctrl + Espace`** | téléporte l'ingénieur, **et le vaisseau où il est assis**, à la caméra |
+| `F6` | rend le contrôle à l'ingénieur |
+
+### Il n'y a pas d'étoile
+
+Le soleil vanilla est une **direction de lumière globale** plus un skybox, pas un objet. Toutes les
+planètes reçoivent la même lumière, dans la même direction, au même moment. « Proche de l'étoile »
+n'a donc aucune existence mécanique : la chaleur d'Ignis est une propriété de sa définition, pas de
+sa position. Le placement est libre, et gouverné par un seul critère réel, le temps de trajet.
+
+### Ce qui calibre les distances
+
+Le jump drive vanilla porte à **2000 km**, le Prototech à 6000 km. La vitesse est plafonnée à 100 m/s
+et **ne se règle pas dans les paramètres de session** : `AdjustableMaxVehicleSpeed` ne concerne que
+les blocs de suspension. Un trajet de 2000 km représente donc 5 h 30 de vol direct : le jump drive est
+l'infrastructure de base d'un système solaire, pas un confort.
+
+Repères tirés du preset Star System de Keen, où EarthLike et Mars sont à 1 934 km, soit un saut tout
+juste : une lune à 200 à 300 km de sa planète, et 100 km de centre à centre comme minimum absolu
+(Mars et Europa).
+
+### Aucune lune ne peut orbiter
+
+Les voxels ne se déplacent pas dans ce moteur. Les lunes de ce système sont posées et immobiles.
+C'est une limite du jeu, pas un choix, et c'est exactement ce que Real Solar Systems contourne par une
+illusion : fausses planètes en mouvement, vraies planètes parquées au loin, téléportation du joueur.
+
+## Ce qui a été écarté, et pourquoi
 
 | Écarté | Motif |
 |---|---|
-| Water Mod `2200451495` | le plus coûteux en simulation de la sélection, pour un gain esthétique, sur un hôte mono-thread. Une régression non corrigée depuis la 1.210 |
-| Jormun `3618043241` | sa dépendance au Water Mod est obligatoire et tout son intérêt est un fleuve qui ceinture la planète |
-| Real Solar Systems | l'éditeur ne fonctionne qu'en solo, les transitions de zone sont reconnues instables en multijoueur par son auteur, et une dépendance obligatoire a disparu du Workshop |
-| Real Stars | même dépendance disparue, `Solar Blocks Override`, qui porte précisément la production des panneaux solaires alors que le mod supprime le soleil du skybox |
+| **Real Solar Systems** | l'éditeur ne fonctionne qu'en solo, son auteur reconnaît les transitions de zone instables en multijoueur, et une dépendance obligatoire a disparu du Workshop |
+| **Real Stars** | même dépendance disparue, `Solar Blocks Override`, qui porte précisément la production des panneaux solaires alors que le mod supprime le soleil du skybox |
+| **Water Mod** `2200451495` | le plus coûteux en simulation, pour un gain esthétique, sur un hôte mono-thread. Une régression non corrigée depuis la 1.210 |
+| **Jormun** `3618043241` | dépendance obligatoire au Water Mod, et 12 emplacements de voxel, le plus gourmand du lot |
+| **Luma** `2286318683` | son auteur annonce des problèmes en multijoueur dus à ses fichiers de nuages, non corrigeables. Et 900 km de diamètre, au-delà du menu de spawn |
+| **Orlunda** `2873186053` | 9 voxels, et son concept réclamait de figer le soleil pour tout le système |
+| **Miasma** `3617496051` | 9 voxels et 588 Mo, et ses marais sont secs sans le Water Mod |
+| **Mythu** `3654267020` | 5 voxels, le moins éprouvé du lot avec 868 abonnés |
+| **Tharsis** `3262558921` | 4 voxels, redondant avec les autres mondes arides retenus |
+| **Tibur** `3617040986` | 1 voxel seulement, mais redondant |
 
-**Aucune lune ne peut orbiter une planète.** Les voxels ne se déplacent pas dans ce moteur. Les
-lunes de ce système seront posées et immobiles. C'est une limite du jeu, pas un choix, et c'est
-exactement ce que Real Solar Systems contourne par une illusion.
+## Réserves sur les mods retenus
 
-## Le vanilla est gratuit
+- **Argus** introduit un minerai, **Hydronite**, qui se comporte comme la glace en moins volumineux,
+  et apporte son propre véhicule de réapparition.
+- **Nivis** annonce des matériaux voxel personnalisés, est taguée `Character` parce qu'elle ajoute des
+  *Petrified Sabiroids* (neutralisés par `EnableSpiders=false`, avec leur butin d'uranium), et son
+  auteur reconnaît un coût en particules tout en **proposant une version à météo vanilla sur demande**
+  si les machines modestes souffrent. Licence restrictive, sans conséquence sur serveur.
+- **Kerbin** livre deux variantes, vanilla et prête pour le Water Mod : **la vanilla est celle
+  posée**. Sa géographie étant dessinée autour d'océans, ses îles sont à sec des plateaux entourés de
+  fosses.
+- **Satreus** embarque des araignées nocturnes et des rencontres, tous deux neutralisés.
+- **Torvion** est annoncée comme lune, mais 0.7 g et 1 atm lui donnent un profil de planète.
+- **Real Gas Giants** est un mod porteur de code, du même auteur que trois items disparus du Workshop
+  en juillet 2026.
 
-Huit planètes sont livrées avec le jeu : EarthLike, Mars, Alien, Triton, Pertam, Moon, Europa,
-Titan. Elles ne coûtent **ni téléchargement aux joueurs, ni emplacement de voxel**, puisqu'elles
-sont déjà comptées dans le budget de base. Tout ce qu'un mod de planète apporte se paye ; le vanilla
-non.
+Ignis, Torvion, Umbris et Argus viennent de la même main, toutes mises à jour le 8 septembre 2025.
 
-## La limite qui décide de tout : 128 voxels
+## Ce qui reste à faire
 
-Space Engineers ne supporte que **128 matériaux voxel actifs**, sur une structure de 8 bits. Le
-vanilla en consomme déjà **62** (19 pour les astéroïdes, 43 pour le planétaire), mesurés dans les
-fichiers du jeu. Il reste **66 emplacements** pour l'ensemble des planètes moddées.
-
-Keen a classé la demande d'augmentation en « Considered (Not Planned) » après quatre ans et plus de
-deux cents votes. Ça ne bougera pas.
-
-Le dépassement est **silencieux** : aucune erreur, les planètes se contentent d'afficher de la
-pierre d'astéroïde partout et les minerais perdent leurs textures. C'est le risque principal de ce
-monde, et c'est pourquoi le nombre de voxels d'un mod de planète est devenu un critère d'examen à
-part entière dans `.claude/skills/check-se-mod/`.
-
-## Ce qui calibre les distances
-
-Le jump drive vanilla porte à **2000 km**. Le système livré par Keen est dimensionné là-dessus :
-1 934 km entre EarthLike et Mars, soit un saut tout juste. Les repères tirés de son preset :
-
-- une lune à **200 à 300 km** de sa planète ;
-- **100 km** de centre à centre, c'est le minimum que Keen se permet (Mars et Europa) ;
-- deux planètes voisines à **moins de 2000 km**, pour rester à un saut.
-
-La vitesse est plafonnée à 100 m/s et **ne se règle pas dans les paramètres de session** :
-`AdjustableMaxVehicleSpeed` ne concerne que les blocs de suspension. Les 1 934 km entre deux planètes
-représentent donc plus de cinq heures de vol direct. Le jump drive est l'infrastructure de base d'un
-système solaire, pas un confort.
-
-### Le système de Keen, comme référence
-
-Positions relevées dans `Content/CustomWorlds/Star System`, rayons en mètres.
-
-| Corps | Rayon | Position | Distance du centre |
-|---|---|---|---|
-| Moon | 9 500 | `0, 120000, -130000` | 177 km |
-| EarthLike | 60 000 | `-131072, -131072, -131072` | 227 km |
-| Mars | 60 000 | `900000, 0, 1500000` | 1 749 km |
-| Europa | 9 500 | `900000, 0, 1600000` | 1 836 km |
-| Triton | 40 126 | `-350000, -2500000, 300000` | 2 542 km |
-| Pertam | 30 000 | `-4000000, -65000, -800000` | 4 080 km |
-| Alien | 60 000 | `0, 0, 5600000` | 5 600 km |
-| Titan | 9 500 | `20000, 210000, 5780000` | 5 784 km |
-
-## Les réglages du monde qui comptent
-
-L'**Empty World** part avec un axe solaire incliné d'environ 45°, là où le preset *Star System* l'a
-à plat. Les cycles jour/nuit en dépendent, donc l'axe est corrigé à la main sur la sauvegarde :
-
-| Fichier | Valeurs à poser |
-|---|---|
-| `Sandbox.sbc` | `BaseSunDirection` à `x=0 y=0 z=1` |
-| `SANDBOX_0_0_0_.sbs` | `SunAzimuth` à `3.14159274`, `SunElevation` à `0` |
-
-Le fichier `SANDBOX_0_0_0_.sbsB5` est supprimé après l'édition : c'est une sauvegarde de secours qui
-réintroduirait les anciennes valeurs.
-
-**L'économie reste désactivée pendant toute la construction.** Les stations commerciales ne se
-placent correctement sur des planètes ajoutées après coup que dans un monde où l'économie n'a jamais
-tourné. Elle s'active quand la géométrie est figée. À savoir aussi : plus un monde porte de
-planètes, moins chacune reçoit de stations.
+- **Trancher le mode de jeu.** Le monde et le serveur sont en `Creative`. Tout l'étagement des
+  gravités, des minerais et des distances ne devient un parcours de progression qu'en `Survival`.
+- **Aligner `modpack.txt`** sur les douze mods, dans l'ordre, frameworks en tête. L'entrypoint
+  réécrit l'élément `<Mods>` du monde à chaque démarrage depuis ce fichier : si les deux divergent, le
+  monde se casse au déploiement.
+- **Aligner les réglages du monde** sur ceux du serveur avant de déployer, notamment
+  `BlockLimitsEnabled` qui est à `GLOBALLY` dans le monde et `NONE` côté serveur.
+- **Construire le mécanisme de dépôt du monde** dans le volume `se-data`. Le dépôt n'en a aucun.
+- **Vérifier en jeu** : la visibilité d'Ignis et d'Argus à 6 000 et 8 800 km, le puits de gravité de
+  la géante autour de Tohil, la pondération des ressources de l'anneau, et la calibration de
+  `SolarRadiationIntensity`.
