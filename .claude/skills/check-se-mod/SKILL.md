@@ -44,6 +44,22 @@ mesuré : « Shield Controller Weaponcore » ne déclare aucune dépendance alor
 exige Defense Shields et WeaponCore. L'outil signale les identifiants cités dans le texte,
 l'interprétation reste à faire.
 
+**Distinguer un framework d'un mod de contenu.** Une page Workshop ne le dit pas toujours, et
+plusieurs des mods les plus populaires de l'écosystème **n'ajoutent strictement rien seuls** :
+Modular Encounters Systems ne fait apparaître aucune rencontre, Planet Creature Spawner aucune
+créature, Real Gas Giants aucune planète, les API rien du tout. Ce sont des moteurs qui attendent
+qu'un mod de contenu se pose dessus.
+
+Le symptôme à repérer dans la description : « does not add », « expansion for », « add-on », ou une
+invitation à s'en servir « with any other mod that ». Le poids trahit souvent : un framework pèse
+quelques mégaoctets, un mod de contenu des dizaines. Se tromper là-dessus coûte une installation qui
+ne produit rien, et l'illusion d'avoir réglé un problème.
+
+Un cas particulier vaut d'être connu : un mod peut n'être qu'un **drapeau**. Planet Creature Spawner
+pèse 0,2 Mo et sa seule fonction est d'exister pour que MES détecte son identifiant, ce que le
+réglage `OverrideVanillaCreatureSpawns` de MES fait tout aussi bien. Lire le code du framework quand
+il est public répond à ce genre de question en une minute.
+
 **Lire les commentaires récents.** C'est le seul endroit où l'on apprend qu'un mod est cassé quand
 l'auteur a disparu. Trier par les plus récents et chercher les signalements postérieurs à la
 dernière grosse mise à jour du jeu.
@@ -119,8 +135,20 @@ d'exclusion.
 
 Ne jamais présenter un signal automatique comme une conclusion. « Mis à jour il y a 71 mois » est un
 fait ; « ce mod est cassé » est une hypothèse tant que rien, ni commentaire ni test, ne l'a montré.
-Beaucoup de mods de blocs purs fonctionnent des années sans mise à jour, alors qu'un mod à code
-casse au moindre changement d'API.
+
+**Le signal d'âge ne se lit pas seul : il se croise avec le tag `NoScripts`.** L'outil sort les deux,
+et c'est leur combinaison qui informe.
+
+| | `NoScripts` | pas de `NoScripts` |
+|---|---|---|
+| **Récent** | très sûr | à surveiller aux mises à jour du jeu |
+| **Ancien** | **souvent sans conséquence** | le vrai risque |
+
+Un mod sans code ne dépend d'aucune API : ses définitions et ses prefabs survivent des années. Cas
+mesuré : *Abandoned Settlements*, 49 mois sans mise à jour, tagué `NoScripts`, 95 000 abonnés, aucun
+signalement de rupture dans ses commentaires récents. À l'inverse, un mod à code sorti il y a six
+mois peut être tombé au dernier patch, comme Real Solar Systems l'a été par la 1.210. Écarter sur
+l'âge seul fait perdre de bons mods et en garde de mauvais.
 
 ## 5. Écrire dans le modpack
 
