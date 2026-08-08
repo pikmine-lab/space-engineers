@@ -24,6 +24,16 @@ log() { echo "[entrypoint] $*"; }
 # Not pinnable: Steam updates player clients automatically, so a server left on
 # an older build stops accepting them. SE_SKIP_UPDATE only exists to make local
 # restarts quick while debugging.
+#
+# app_info_update is not optional. Left to itself, SteamCMD decides whether an
+# update is needed from the product info it already holds, and it decides before
+# the refresh lands: on 2026-08-08 it reported "already up to date" on build
+# 24434105, eleven hours after the public branch had moved to 24555793, in a
+# container created minutes earlier with an empty cache. The stale copy on disk
+# is therefore not the cause and deleting it is not the cure; asking for the
+# refresh explicitly is. Getting this wrong locks the server one build behind
+# and no player can join, so the installed build is logged right after: a wrong
+# answer has to be readable in `docker logs` rather than found days later.
 if [ "${SE_SKIP_UPDATE:-0}" = "1" ]; then
   log "SE_SKIP_UPDATE=1, skipping the game update"
 else
@@ -34,11 +44,18 @@ else
     +@sSteamCmdForcePlatformType windows \
     +force_install_dir "${SERVER}" \
     +login anonymous \
+    +app_info_update 1 \
     +app_update "${SE_APPID}" \
     +quit
 fi
 
 [ -d "${SERVER}/DedicatedServer64" ] || { log "FATAL: DedicatedServer64 missing, SteamCMD did not complete"; exit 10; }
+
+# Read back rather than trusted: SteamCMD reports success in both cases, so the
+# build number is the only thing that tells an update apart from a no-op.
+MANIFEST="${SERVER}/steamapps/appmanifest_${SE_APPID}.acf"
+BUILD="$(sed -n 's/.*"buildid"[^"]*"\([0-9]*\)".*/\1/p' "${MANIFEST}" 2>/dev/null | head -1 || true)"
+log "game build ${BUILD:-unknown}"
 
 # --- 2. Torch ----------------------------------------------------------------
 # Copied out of the image, not downloaded, so a Jenkins outage cannot stop the
