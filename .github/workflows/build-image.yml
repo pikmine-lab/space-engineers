@@ -16,6 +16,7 @@ on:
     paths:
       - image/**
       - server/config/**
+      - server/world-seed/**
       - .github/workflows/build-image.yml
   workflow_dispatch:
 
@@ -52,8 +53,8 @@ jobs:
 
       - uses: docker/build-push-action@v6
         with:
-          # The whole repository: the Dockerfile copies server/config/ in as
-          # the seed configuration.
+          # The whole repository: the Dockerfile copies server/config/ in as the
+          # seed configuration, and server/world-seed/ as the premade world.
           context: .
           file: image/Dockerfile
           push: true
