@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-16"?>
+<RealGasGiantsSettingsConfig xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <OverrideFromConfig>false</OverrideFromConfig>
+  <AllowChatCommands>true</AllowChatCommands>
+  <GasGiantBlocksSun>true</GasGiantBlocksSun>
+  <GasGiantAirDensity>30</GasGiantAirDensity>
+  <GasGiantWindSpeed>200</GasGiantWindSpeed>
+  <SetGlobalNoAsteroids>false</SetGlobalNoAsteroids>
+  <CanSpawnOnGasGiants>true</CanSpawnOnGasGiants>
+  <EnableGasGiantWindTurbines>true</EnableGasGiantWindTurbines>
+  <UseLensFlareOccluder>true</UseLensFlareOccluder>
+  <RingParticleLevel>2</RingParticleLevel>
+  <GasGiantInfoList>
+    <GasGiantConfigInfo PlanetName="RealGasGiant-129287286d19000">
+      <PlanetCustomName>RealGasGiant-129287286d19000-8222702292923631558</PlanetCustomName>
+      <Radius>180</Radius>
+      <PlanetColor X="255" Y="210" Z="190" />
+      <PlanetSkin>Default1</PlanetSkin>
+      <OxygenDensity>0</OxygenDensity>
+      <RingsInfo>
+        <RingConfigInfo>
+          <HasRing>true</HasRing>
+          <RingSkin>Default1</RingSkin>
+          <RingNormal X="-0.0217195749" Y="10" Z="0.25210166" />
+          <RingColor X="248" Y="232" Z="220" />
+          <RingLightMult>1</RingLightMult>
+          <RingShadowMult>1</RingShadowMult>
+          <RingInnerScale>1.09980607</RingInnerScale>
+          <RingOuterScale>3.976417</RingOuterScale>
+          <RingLayerSpacingScale>1</RingLayerSpacingScale>
+          <RingRotationPeriodSeconds>7200</RingRotationPeriodSeconds>
+          <ConstrainNearbyAsteroidsToRing>true</ConstrainNearbyAsteroidsToRing>
+          <ShadowOnRingEnabled>true</ShadowOnRingEnabled>
+          <CollectRingResources>true</CollectRingResources>
+          <CollectResourceRingSubtypeId>Iron,Iron,Iron,Iron,Nickel,Nickel,Nickel,Silicon,Silicon,Gold</CollectResourceRingSubtypeId>
+          <CollectResourceRingAmount>100</CollectResourceRingAmount>
+          <EnabledDraw>true</EnabledDraw>
+          <EnabledParticle>true</EnabledParticle>
+        </RingConfigInfo>
+      </RingsInfo>
+      <InteriorInfo>
+        <AsteroidRemoval>true</AsteroidRemoval>
+        <PressureDamagePlayers>true</PressureDamagePlayers>
+        <PressureDamageGrids>true</PressureDamageGrids>
+      </InteriorInfo>
+      <ResourceInfo>
+        <CollectPlanetResources>true</CollectPlanetResources>
+        <CollectResourceUpperSubtypeId>Ice</CollectResourceUpperSubtypeId>
+        <CollectResourceUpperAmount>1000</CollectResourceUpperAmount>
+        <CollectResourceLowerSubtypeId>Silicon</CollectResourceLowerSubtypeId>
+        <CollectResourceLowerAmount>1000</CollectResourceLowerAmount>
+      </ResourceInfo>
+      <GravityStrength>2</GravityStrength>
+      <GravityFalloff>7</GravityFalloff>
+      <DayLengthSeconds>7200</DayLengthSeconds>
+      <SpinCounterClockwise>true</SpinCounterClockwise>
+    </GasGiantConfigInfo>
+  </GasGiantInfoList>
+  <PlanetRingInfoList />
+</RealGasGiantsSettingsConfig>

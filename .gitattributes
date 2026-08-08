@@ -4,3 +4,9 @@
 *.sh text eol=lf
 *.py text eol=lf
 Dockerfile text eol=lf
+
+# The world seed is game data, not source: git must not touch a byte of it. The
+# .vx2 voxel files are gzip streams that end-of-line conversion would corrupt,
+# and the .sbc / .sbs files are written by the game with its own encoding. Diffs
+# on a 2.6 MB sector file would be unreadable anyway.
+server/world-seed/** binary

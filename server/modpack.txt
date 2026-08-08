@@ -18,4 +18,30 @@
 #     very first modded run always needs a second start.
 #   - Several mods need ExperimentalMode set to true in the dedicated config.
 
-# (empty: the planet selection is still open, see world.md for the candidates)
+# --- Frameworks -------------------------------------------------------------
+# They carry no content of their own and every mod below may call into them, so
+# they load first. A "wrong order" here is one of the causes of the
+# "Reference issue detected" failure that aborts the whole mod download.
+758597413    # Text HUD API
+3222232482   # Visual Overrides API
+3218645300   # Asteroid Filter API
+1521905890   # Modular Encounters Systems - spawn engine, adds nothing by itself
+3232085677   # Real Gas Giants - needs the three APIs above
+
+# --- The system -------------------------------------------------------------
+# Listed outward from Kerbin, which sits at the origin. Each defines its own
+# subtypes, so their relative order carries no meaning; the reading order does.
+# Together they hold 34 of the 66 voxel material slots left by vanilla.
+2941085186   # Kerbin - the start. Spawn the vanilla variant, never the water one
+2266665708   # Satreus - one jump out, breathable
+3118433062   # Umbris - satellite of the gas giant
+3028355567   # Torvion - satellite of the gas giant
+2296726670   # Tohil - satellite of the gas giant
+3684013414   # Nivis - three jumps out, frozen
+3146087212   # Argus - four jumps out, six storm types
+3343005457   # Ignis - five jumps out, molten, the far edge
+
+# --- Encounters -------------------------------------------------------------
+# Content for the spawn engine, therefore after it. Abandoned Settlements only
+# populates planets that have an atmosphere.
+2310821218   # Abandoned Settlements v2 - planetary installations to salvage
