@@ -29,6 +29,31 @@
 3232085677   # Real Gas Giants - needs the three APIs above
 1965654081   # Rich HUD Master - GUI framework, drawn client side but runs here too
 2754014019   # Scope Framework - hand weapon scopes, code only, no definitions of its own
+#
+# The combat engine, and the shields that only work behind it. WeaponCore adds
+# no weapon of its own: it reimplements the 18 vanilla weapon definitions in its
+# own format and takes target tracking away from the turrets to run it for the
+# whole grid. Defense Shields holds no reference to WeaponCore, the coupling runs
+# the other way: WeaponCore is what tests a projectile against a shield, so
+# without it the bullets pass straight through and the shields protect nothing.
+# Hence the order, and hence the fact that neither one is worth adding alone.
+#
+# Three things measured before they went in, none of them stated on a Workshop
+# page:
+#   - Neither claims a voxel material slot, so the 66 free ones stay untouched.
+#   - WeaponCore registers no damage handler, so it cannot reach damage it did
+#     not cause. Vehicles breaking on terrain is a subgrid or world setting
+#     matter, not this. EnableSubgridDamage is already false here.
+#   - Every weapon in the encounter prefabs below is vanilla, and therefore gets
+#     converted rather than dropped. The one exception is Wasteland's two
+#     ARYXRailgunTurret, already absent for want of the Aryx mod.
+#
+# Two things to know before touching them. Turret range never exceeds
+# SyncDistance, 3000 here, whatever range a weapon claims. And WeaponCore's
+# server config lives in the world Storage like the MES one, so it lands a start
+# late on a fresh world and belongs in overrides.txt rather than here.
+3154371364   # WeaponCore - combat framework, converts vanilla weapons, drops third party ones
+3154379105   # Defense Shields - needs WeaponCore above, 18 blocks, 4 of them NPC only
 
 # --- The system -------------------------------------------------------------
 # Listed outward from Kerbin, which sits at the origin. Each defines its own
