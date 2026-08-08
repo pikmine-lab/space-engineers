@@ -14,8 +14,8 @@
 #                                                  ^^^^^^^^^^
 #
 # Two things to know before filling this in:
-#   - A world only picks up mods on the start *after* it was created, so the
-#     very first modded run always needs a second start.
+#   - A fresh world is born with its mods, since the entrypoint patches the
+#     seed too. The old "wait for the second start" rule no longer applies.
 #   - Several mods need ExperimentalMode set to true in the dedicated config.
 
 # --- Frameworks -------------------------------------------------------------

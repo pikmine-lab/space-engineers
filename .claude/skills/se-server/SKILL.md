@@ -52,7 +52,15 @@ Le nom du monde (`Pikmine`) n'est pas garanti : passer par `Saves/*/` plutôt qu
 `.sbc` d'un mod sans être abonné sur un poste de jeu, et c'est ce qui répond aux questions qu'une
 page Steam ne tranche jamais : les conditions de spawn réelles d'un mod de rencontres, le nombre de
 matériaux voxel qu'il consomme, les `SubtypeId` qu'il définit. Limite à connaître : **seuls les mods
-du modpack en service y sont**. Examiner un candidat suppose donc de le provisionner d'abord.
+du modpack en service y sont**. Un candidat n'a pas besoin d'être provisionné pour autant : SteamCMD
+le télécharge en login anonyme dans un dossier jetable, mesuré sur quatre mods.
+
+```sh
+se.sh 'steamcmd +force_install_dir /tmp/wsprobe +login anonymous +workshop_download_item 244850 <id> +quit'
+```
+
+C'est la seule écriture inoffensive de cette page, parce qu'elle ne touche rien du serveur. Supprimer
+le dossier ensuite.
 
 ```sh
 se.sh 'grep -rho "\[.*TerrainTypes:[^]]*\]" /data/server/instance/content/244850/<id> | sort -u'

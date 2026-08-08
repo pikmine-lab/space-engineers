@@ -90,10 +90,17 @@ emplacements** pour l'ensemble des mods. Presque aucun auteur ne chiffre sa cons
 la mentionnent se contentent d'un « custom voxels » sans nombre : elle se **mesure**, elle ne se lit
 pas.
 
-La mesure demande d'être abonné au mod. Compter, dans les `.sbc` du dossier téléchargé, les
-`VoxelMaterialDefinition` dont le `SubtypeId` n'existe pas déjà dans `Content/Data/VoxelMaterials*.sbc`
-du jeu. Un matériau qui surcharge un matériau vanilla ne coûterait rien, mais en pratique les mods de
-planètes ajoutent au lieu de surcharger. Les ordres de grandeur observés vont de 0 à 12 par planète,
+La mesure ne demande ni abonnement ni ajout au modpack : SteamCMD télécharge n'importe quel item du
+Workshop en login anonyme depuis le conteneur, dans un dossier jetable qu'on supprime ensuite.
+
+```sh
+.claude/skills/se-server/se.sh 'steamcmd +force_install_dir /tmp/wsprobe +login anonymous +workshop_download_item 244850 <id> +quit'
+```
+
+Compter, dans les `.sbc` du dossier téléchargé, les `VoxelMaterialDefinition` dont le `SubtypeId`
+n'existe pas déjà dans `Content/Data/VoxelMaterials*.sbc` du jeu. Un matériau qui surcharge un
+matériau vanilla ne coûterait rien, mais en pratique les mods de planètes ajoutent au lieu de
+surcharger. Les ordres de grandeur observés vont de 0 à 12 par planète,
 sans corrélation avec le poids du mod : une planète de 109 Mo peut ne rien coûter quand une autre en
 consomme neuf.
 
@@ -165,5 +172,6 @@ Rappeler ensuite les deux conséquences opérationnelles :
 
 - l'ajout ne prend effet qu'après `nr provision`, qui met à jour la variable du service et
   redéploie ;
-- **un monde neuf ignore les mods à son premier démarrage**, puisqu'il n'existe pas encore au moment
-  de l'injection. Le premier lancement modé demande toujours un second démarrage.
+- **un monde neuf naît avec ses mods**, puisque l'entrypoint patche aussi `premade-world`.
+  L'ancienne règle du second démarrage ne vaut plus pour les mods, seulement pour les réglages de
+  MES, dont le `Storage` n'existe pas encore.

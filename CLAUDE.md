@@ -380,6 +380,9 @@ de `Logs/` (un fichier par jour, ni compressé ni supprimé) et les minidumps, m
 - **La tenue en charge n'est pas mesurée.** La simulation de Space Engineers est essentiellement
   mono-thread et l'hôte est un EPYC virtualisé à 2,0 GHz. Ça devrait suffire à quelques joueurs,
   mais tant que rien n'a été mesuré, ce n'est qu'une hypothèse.
-- **Le pré-téléchargement des mods par SteamCMD n'est pas tranché.** Le serveur les télécharge
-  lui-même, DLL corrigées à l'appui. Si cela s'avère insuffisant, le repli est de les pré-télécharger
-  avec `workshop_download_item 244850`, dont le fonctionnement en login anonyme reste à vérifier.
+- **Le pré-téléchargement des mods par SteamCMD n'a jamais eu à servir.** Le serveur les télécharge
+  lui-même, DLL corrigées à l'appui. Le repli, lui, n'est plus une hypothèse : `steamcmd +login
+  anonymous +workshop_download_item 244850 <id>` fonctionne depuis le conteneur, mesuré sur quatre
+  mods le 8 août 2026. Ce qui reste inconnu est le cas où le téléchargement par le serveur cesserait
+  de suffire, jamais rencontré. Le login anonyme sert aussi à lire un mod **candidat**, sans
+  l'ajouter au modpack : la skill `check-se-mod` s'en sert pour compter ses matériaux voxel.
