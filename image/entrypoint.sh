@@ -11,6 +11,9 @@ set -euo pipefail
 SERVER=/data/server
 INSTANCE="${SERVER}/instance"
 STEAM_SDK=/data/steam-sdk-win
+# Only ever exists while recovering a stuck update, and is removed straight
+# after. It holds a full second copy of the game, so around 8 GB.
+SCRATCH=/data/scratch-install
 
 # 298740 is the dedicated server, free and downloadable anonymously. 1007 is
 # Valve's Steamworks SDK Redist, which is where the up-to-date Steam libraries
@@ -34,19 +37,55 @@ log() { echo "[entrypoint] $*"; }
 # refresh explicitly is. Getting this wrong locks the server one build behind
 # and no player can join, so the installed build is logged right after: a wrong
 # answer has to be readable in `docker logs` rather than found days later.
-if [ "${SE_SKIP_UPDATE:-0}" = "1" ]; then
-  log "SE_SKIP_UPDATE=1, skipping the game update"
-else
-  log "updating Space Engineers (appid ${SE_APPID})..."
+#
+# The rungs below are the recovery ladder, and each one is there because the one
+# above it was measured failing on 2026-08-08, with the install stuck reporting
+# "Access Denied" on the manifest it already had:
+#
+#   - a plain update is the normal path and costs nothing when it works;
+#   - validate repairs an install whose files drifted, which is the common case;
+#   - installing into an empty directory is the only thing that always works,
+#     because a clean install never has to reconfigure from a manifest Steam has
+#     since withdrawn. Its manifests are then handed to the real install, which
+#     validate reconciles: that sequence is what recovered the server.
+#
+# The last rung starts the server anyway rather than exiting. Exiting only makes
+# Docker restart the container, which repairs nothing and hides the reason in a
+# loop of identical logs, and that is exactly how this incident presented.
+
+# $1 install directory, $2 optional extra app_update argument.
+update_game() {
+  log "updating Space Engineers (appid ${SE_APPID}) in $1 ${2:-}"
   steamcmd \
     +@ShutdownOnFailedCommand 1 \
     +@NoPromptForPassword 1 \
     +@sSteamCmdForcePlatformType windows \
-    +force_install_dir "${SERVER}" \
+    +force_install_dir "$1" \
     +login anonymous \
     +app_info_update 1 \
-    +app_update "${SE_APPID}" \
+    +app_update "${SE_APPID}" ${2:-} \
     +quit
+}
+
+if [ "${SE_SKIP_UPDATE:-0}" = "1" ]; then
+  log "SE_SKIP_UPDATE=1, skipping the game update"
+elif update_game "${SERVER}"; then
+  :
+elif update_game "${SERVER}" validate; then
+  log "the plain update failed, validate recovered it"
+else
+  log "WARNING: update still failing, reinstalling into ${SCRATCH} to get a clean manifest"
+  rm -rf "${SCRATCH}"
+  mkdir -p "${SERVER}/steamapps"
+  rm -rf "${SERVER}/steamapps/downloading" "${SERVER}/steamapps/temp"
+  if update_game "${SCRATCH}" \
+    && cp -a "${SCRATCH}"/steamapps/appmanifest_*.acf "${SERVER}/steamapps/" \
+    && update_game "${SERVER}" validate; then
+    log "recovered from a clean manifest"
+  else
+    log "WARNING: the game could not be updated, starting on the installed build"
+  fi
+  rm -rf "${SCRATCH}"
 fi
 
 [ -d "${SERVER}/DedicatedServer64" ] || { log "FATAL: DedicatedServer64 missing, SteamCMD did not complete"; exit 10; }
