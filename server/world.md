@@ -244,6 +244,44 @@ l'est pas : le gradient est certain, son ampleur non.
 Les météos vanilla portent un `RadiationGain` **négatif** (`-0.6` pour pluies, brouillards et orages,
 plage `[-100, 100]`), donc elles protègent du soleil. S'abriter d'une tempête a un sens mécanique.
 
+## Les rencontres, et le terrain qui les gouverne
+
+Modular Encounters Systems n'apporte rien seul. Quatre mods de contenu se posent dessus, tous
+`NoScripts`, tous dépendants de MES et de rien d'autre :
+
+| Mod | Ce qu'il pose | Où |
+|---|---|---|
+| Abandoned Settlements v2 `2310821218` | installations planétaires à piller | partout, **sans aucune condition** |
+| Planetary Derelicts `2621351690` | stations économiques et bâtiments Lost Colony | toute planète, avec ou sans atmosphère |
+| Lost Colony + Frostbite `2617194602` | bâtiments des deux scénarios | herbe, sable et neige seulement |
+| Wasteland Encounters V2 `2539299261` | épaves rouillées et avant-postes | lié à aucune planète |
+
+**MES filtre les rencontres planétaires sur le `MaterialTypeName`, pas sur le `SubtypeId`.** C'est ce
+qui décide si un mod de rencontres fonctionne sur un système entièrement moddé, et la réponse est
+oui : les 34 matériaux ajoutés par nos douze mods **réutilisent tous les 16 types vanilla**, aucun
+n'en invente. Mesuré dans les couches de surface de chaque définition de planète :
+
+| Planète | Grass | GrassDry | Soil | Sand | MarsSoil | Snow | Ice | Rock | MoonSoil |
+|---|---|---|---|---|---|---|---|---|---|
+| Kerbin | ✓ | ✓ | ✓ | ✓ | | ✓ | ✓ | ✓ | ✓ |
+| Satreus | | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | |
+| Nivis | | | | | | ✓ | ✓ | ✓ | ✓ |
+| Tohil | | | | | | ✓ | ✓ | | |
+| Umbris | | | | | | | ✓ | | ✓ |
+| Argus, Ignis | | | | | | | | ✓ | ✓ |
+| Torvion | | | | | | | | | ✓ |
+
+Kerbin ne déclare **aucun matériau à lui** : c'est une EarthLike repeinte, donc elle porte tous les
+terrains vanilla et reçoit tout. À l'autre bout, Umbris, Torvion, Argus et Ignis n'ont que du `Rock`
+et du `MoonSoil` : **seuls les mods sans condition de terrain les peuplent**, ce qui est le cas de
+trois des quatre.
+
+Une affirmation de ce fichier était fausse et la mesure l'a corrigée : Abandoned Settlements ne
+demande **ni atmosphère, ni planète, ni terrain**. Ses profils ne portent que
+`[PlanetaryInstallation:true]` et un contrôle de niveau de menace. La source est lisible sur le
+serveur, dans `instance/content/244850/<id>/Data/Profiles/SpawnConditions/`, et c'est la seule qui
+vaille : ni la page Steam ni la description de l'auteur ne disent ça.
+
 ### Un réglage refusé
 
 Orlunda réclamait la **désactivation de la rotation du soleil** pour que son verrouillage de marée
@@ -371,8 +409,12 @@ Ignis, Torvion, Umbris et Argus viennent de la même main, toutes mises à jour 
   déclarent déjà et les fait spawner par son propre système, avec ses conditions de météo, de terrain
   et de score de menace, plus une liste noire par planète. Cette configuration vit dans le `Storage`
   du monde, donc elle se fait **sur le serveur**.
-- **Décider du contenu de rencontres au-delà d'Abandoned Settlements**, qui ne peuple que les
-  planètes à atmosphère.
+- **Régler MES avant que les rencontres n'arrivent en nombre.** Sa configuration vit dans le
+  `Storage` du monde, donc sur le serveur. Deux réglages à peser dans
+  `Config-PlanetaryInstallations.xml` : `MaxShipsPerArea` à 10 par zone de 15 km, et surtout le
+  nettoyage, qui retire un grid MES à 50 km ou après une heure, et **à 25 km au bout de 15 minutes
+  s'il n'est pas alimenté**. C'est le mécanisme derrière les épaves réclamées qui disparaissent, un
+  symptôme rapporté sur Planetary Derelicts.
 - **Nettoyer ou garder la rencontre Factorum** présente dans la graine.
 - **Vérifier en jeu** : la visibilité d'Ignis et d'Argus à 6 000 et 8 800 km, le puits de gravité de
   la géante autour de Tohil, la pondération des ressources de l'anneau, et la calibration de

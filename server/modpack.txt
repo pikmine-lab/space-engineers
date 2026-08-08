@@ -42,6 +42,19 @@
 3343005457   # Ignis - five jumps out, molten, the far edge
 
 # --- Encounters -------------------------------------------------------------
-# Content for the spawn engine, therefore after it. Abandoned Settlements only
-# populates planets that have an atmosphere.
+# Content for the spawn engine, therefore after it. None of them overrides
+# another, so their relative order carries no meaning here; what they do share
+# is spawn slots, and that is arbitrated in the MES config, not in this file.
+#
+# MES filters planetary spawns on MaterialTypeName, and none of the eight
+# planet mods above invents one: they all reuse the vanilla types. Terrain
+# bound encounters therefore work on this system. Measured coverage:
+#   Grass           -> Kerbin
+#   Sand, MarsSoil  -> Kerbin, Satreus
+#   Snow            -> Kerbin, Satreus, Nivis, Tohil
+#   Rock, MoonSoil  -> Umbris, Torvion, Argus, Ignis, reached only by the mods
+#                      that carry no terrain condition at all
 2310821218   # Abandoned Settlements v2 - planetary installations to salvage
+2621351690   # Planetary Derelicts - any planet, with or without atmosphere
+2617194602   # Lost Colony + Frostbite - grass, sand and snow only
+2539299261   # Wasteland Encounters V2 - rusted wrecks, tied to no planet
