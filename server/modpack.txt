@@ -99,6 +99,18 @@
 2678657382   # AQD - Small Grid Expansion - 7 large grid blocks brought to small grid
 3768506853   # Humanoid's Retro Command Module - Apollo styled small grid cockpit
 3770315903   # Humanoid's Retractable Solar Panels - a door that generates power, scripted
+#
+# Powercore Batteries is the one block mod here that carries code, ten files
+# with a protobuf protocol of its own, so it is the one to suspect at the next
+# game update. It overrides no vanilla definition, tags no block <DLC> and
+# claims no voxel material; its ResearchBlocks entries are inert while
+# EnableResearch stays false. Two flaws measured in its files, neither of them
+# blocking: its BlockCategories.sbc declares GuiBlockGategoryDefinition, a type
+# that exists nowhere in the distribution, so the category is dropped and both
+# blocks are missing from the Power tab of the G menu though search still finds
+# them; and the Energy gas its modules store is declared by nobody, the script
+# only ever reading the item's GasLevel rather than the definition.
+3622757513   # Modular Powercore Batteries - swap a charged core instead of waiting
 2621169600   # AQD - Upgradeable Gyroscopes - one 3x3x3 gyro, boosters and upgrade modules
 
 # --- Encounters -------------------------------------------------------------
@@ -124,6 +136,18 @@
 2617194602   # Lost Colony + Frostbite - grass, sand and snow only
 2539299261   # Wasteland Encounters V2 - rusted wrecks, tied to no planet
 3694295503   # SWORD Faction MES - hostile navy, space only, from 300 threat level
+#
+# Mobile Merchants is the first entry here to use a cargo ship type at all: the
+# four packs above are planetary installations and SWORD is a random space
+# encounter, so nothing was travelling anywhere. It rides the atmospheric and
+# lunar types only, never space, its space spawngroup being commented out in its
+# own file. Three things checked rather than assumed: its prefabs are pure
+# vanilla, so WeaponCore converts their single interior turret instead of
+# dropping it; the container type it rewrites for its store orders exists in no
+# other mod here nor in the game itself; and it draws a random Builder faction,
+# of which the world holds three. CargoShipsEnabled being false in the world is
+# not in the way, MES forces that to false itself to replace the vanilla spawner.
+2610099423   # MES Mobile Merchants - travelling stores, planet bound, needs 0 reputation
 
 # --- Tools ------------------------------------------------------------------
 # Character tools, and the wheel that reaches them. Terrain Tool is the only
