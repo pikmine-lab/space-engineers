@@ -170,23 +170,61 @@ Acceptable entre gens qui se connaissent, à revoir si le serveur s'ouvre.
 Une seule exception, `~/.config/dokploy/token` : le jeton d'API sert aussi au dépôt `infra`, donc il
 n'appartient pas à ce projet. `DOKPLOY_AUTH_TOKEN` dans le `.env` reste prioritaire s'il est défini.
 
+Ces trois valeurs vivent une seconde fois dans l'**environment GitHub `production`**, puisque c'est
+le pipeline qui provisionne. Il est restreint à `main` : un workflow parti d'une autre branche ne
+peut pas les lire.
+
+**Le jeton mérite d'être regardé en face.** Dokploy ne sait pas le restreindre à un projet, il est
+instance-wide et [c'est documenté chez eux](https://github.com/Dokploy/dokploy/issues/4502) : ce
+qu'on confie à GitHub ouvre tout le plan de contrôle de l'hôte. D'où trois précautions dans le
+pipeline, à ne pas défaire : le jeton est un secret d'environment et non de dépôt, les actions y sont
+**épinglées par commit** et non par tag (c'est par un tag repointé que `tj-actions/changed-files` a
+fait fuiter des secrets en 2025), et le job qui le porte n'installe rien hors du lockfile.
+
+Le webhook de déploiement de Dokploy, lui, ne remplace pas ce jeton : il redéclenche un service,
+il ne met pas à jour son environnement, alors que changer `SE_IMAGE_TAG` ou `SE_MODS` est justement
+ce que le provisionneur vient faire.
+
 Les administrateurs sont **réinjectés à chaque démarrage**, comme le modpack : la liste est du code.
 En contrepartie, promouvoir quelqu'un depuis le jeu ne survit pas à un redémarrage.
 
 ## Déploiement
 
-Image construite par GitHub Actions et publiée sur GHCR, déploiement par le provisionneur. Une
-construction ne déploie rien : elle **écrit le tag qu'elle vient de produire dans `specs.ts` et le
-commit**, ce qui rend un candidat disponible, sans plus. Le déploiement reste un geste séparé, d'où
-le `git pull` en tête.
+**Un push sur `main` suffit.** Le pipeline construit l'image, la publie sur GHCR, écrit le tag qu'il
+vient de produire dans `specs.ts`, le commit, puis réconcilie Dokploy. Plus rien à taper localement,
+sauf pour regarder ou pour court-circuiter :
 
 ```sh
-git pull           # récupère le tag écrit par la dernière construction
 cd provision
 ni                 # installe les dépendances
 nr plan            # montre l'écart, ne change rien
-nr provision       # applique
+nr provision       # applique depuis ici, sans passer par le pipeline
 ```
+
+Trois jobs en chaîne, et le découpage n'est pas cosmétique :
+
+- **`changes`** décide, en un appel à l'API compare, si l'image doit être reconstruite.
+  Volontairement pas une action tierce : ce workflow porte un jeton d'infra et n'a pas à en inviter
+  une de plus.
+- **`build`** ne tourne que si `image/`, `server/config/` ou `server/world-seed/` ont bougé. C'est
+  lui qui écrit le tag et le commit.
+- **`deploy`** tourne **toujours**, et c'est voulu : le provisionneur lit Dokploy avant d'agir et
+  n'applique qu'une différence réelle, donc un passage pour rien coûte dix secondes et affiche
+  « matches the spec ». Trier ici ce qui a changé ne ferait que dupliquer, moins bien, ce qu'il fait
+  déjà.
+
+Un changement de `SE_ADMINS` n'a aucun fichier pour l'annoncer : c'est le cas du déclenchement
+manuel, qui saute le build et ne fait que provisionner.
+
+**Pourquoi un seul workflow et pas deux.** Un push fait avec `GITHUB_TOKEN` ne déclenche aucun run,
+c'est la protection anti-boucle de GitHub. Le commit du tag ne pourrait donc jamais réveiller un
+workflow de déploiement séparé, et le chaînage doit vivre dans un run unique. **Pourquoi deux jobs
+et pas deux étapes** : les secrets d'un environment ne sont remis qu'au job qui le déclare, donc le
+jeton Dokploy ne partage jamais son processus avec les actions Docker.
+
+Piège de câblage à connaître si on y touche : un job dont un `needs` a été *sauté* est sauté à son
+tour, par défaut. C'est exactement le cas « je pousse `modpack.txt`, le build ne tourne pas », d'où
+le `if: !cancelled()` et les `result` testés explicitement sur `deploy`.
 
 Le provisionneur lit l'état avant d'agir, n'agit que sur une différence réelle et **ne supprime
 jamais rien** : vider la spec laisse le serveur tourner plutôt que de perdre un monde. Corollaire à

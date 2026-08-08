@@ -25,8 +25,9 @@ export type Spec = {
    * from the repository, and the provisioner only redeploys on a difference, so
    * a tag that never changed would never ship anything either.
    *
-   * The build workflow writes this line and commits it, so a build leaves a
-   * candidate here. Deploying it stays a separate act: pull, then provision.
+   * The pipeline writes this line and commits it, then deploys it in the same
+   * run. Editing it by hand is only ever needed to roll back to an earlier
+   * build, which `nr provision` then applies.
    */
   imageTag: string;
 };

@@ -1,0 +1,216 @@
+# Builds the server image, then brings Dokploy in line with the repository.
+#
+# One workflow rather than two, and the reason is not tidiness: a push made with
+# GITHUB_TOKEN starts no workflow run, so the tag the build commits could never
+# trigger a separate deploy workflow. Chaining it inside a single run is what
+# makes it work at all.
+#
+# The two jobs stay separate for the opposite reason. Environment secrets are
+# only handed to the job that declares the environment, so the Dokploy token,
+# which is instance-wide and cannot be scoped down to one project, never shares
+# a process with the Docker actions.
+#
+# Actions are pinned by commit rather than by tag throughout. A tag is a moving
+# target its owner can repoint, which is how tj-actions/changed-files leaked
+# secrets across thousands of repositories in 2025.
+
+name: pipeline
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - image/**
+      - server/**
+      - provision/**
+      - .github/workflows/pipeline.yml
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/${{ github.repository_owner }}/space-engineers
+
+jobs:
+  # Which files moved decides whether the image is rebuilt. Deliberately not an
+  # action: one API call does it, and this workflow is no place to invite a
+  # third party it does not need.
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      image: ${{ steps.diff.outputs.image }}
+    steps:
+      - id: diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEFORE: ${{ github.event.before }}
+          EVENT: ${{ github.event_name }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          # A manual run never rebuilds. It exists for the values that live
+          # outside the repository, SE_ADMINS first of all, whose change no
+          # file can announce.
+          if [ "$EVENT" != "push" ]; then
+            echo "image=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # A branch that is new or was force-pushed leaves no usable base, so
+          # build rather than guess.
+          if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            echo "image=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          FILES=$(gh api "repos/$REPO/compare/$BEFORE...$SHA" --jq '.files[].filename')
+          echo "Changed files:"
+          printf '%s\n' "$FILES"
+
+          # The image carries the config and the world seed, so those rebuild it
+          # too. Everything else only ever reaches Dokploy through the deploy job.
+          if printf '%s\n' "$FILES" | grep -qE '^(image/|server/config/|server/world-seed/|\.github/workflows/pipeline\.yml)'; then
+            echo "image=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "image=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  # The build takes a while, most of it installing .NET Framework 4.8 into the
+  # Wine prefix, hence the gate above rather than a rebuild on every push.
+  build:
+    needs: changes
+    if: needs.changes.outputs.image == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      # write, not read: the last step commits the new tag back to main.
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5
+        with:
+          images: ${{ env.IMAGE }}
+          # sha-<short> is the tag meant to be deployed: it is immutable and
+          # names exactly one build. `latest` is a convenience for pulling by
+          # hand, never what the provisioner points at.
+          tags: |
+            type=sha
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          # The whole repository: the Dockerfile copies server/config/ in as the
+          # seed configuration, and server/world-seed/ as the premade world.
+          context: .
+          file: image/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Writing the tag by hand was the one manual step left in the loop, and the
+      # one that made every build leave an uncommitted diff behind.
+      #
+      # This commit does not retrigger the workflow, twice over: the push is made
+      # with GITHUB_TOKEN, which starts no run, and the deploy job below is
+      # already downstream of this one anyway.
+      - name: Write the deployable tag into the spec
+        # Only from main. A build from anywhere else is not a deployment
+        # candidate, which is also why `latest` is restricted to the default
+        # branch above.
+        if: github.ref == 'refs/heads/main'
+        run: |
+          # Read the tag off the metadata action rather than recomputing it:
+          # `git rev-parse --short` widens the abbreviation when it has to,
+          # while type=sha always truncates to the same 7 characters. The
+          # `version` output is no use here, it resolves to `latest`, whose
+          # priority outranks the sha tag.
+          TAG=$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | sed -n 's/^.*:\(sha-.*\)$/\1/p' | head -n1)
+          if [ -z "$TAG" ]; then
+            echo "::error::no sha- tag in the metadata output"
+            exit 1
+          fi
+
+          # main may have moved during the build, which takes about twenty
+          # minutes. Checkout left us on the triggering commit, which is what the
+          # image was built from, but not what we can push onto.
+          git fetch origin main
+          git checkout -B main origin/main
+
+          sed -i "s/imageTag: \"[^\"]*\"/imageTag: \"$TAG\"/" provision/src/specs.ts
+          # A silent no-op here would read as "nothing to deploy" on the next
+          # run, so a spec that no longer carries the field is an error.
+          if ! grep -q "imageTag: \"$TAG\"" provision/src/specs.ts; then
+            echo "::error::imageTag not found in provision/src/specs.ts"
+            exit 1
+          fi
+
+          if git diff --quiet -- provision/src/specs.ts; then
+            echo "Spec already at \`$TAG\`, nothing to commit." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add provision/src/specs.ts
+          git commit -m "chore(provision): deploy $TAG"
+          git push origin main
+
+          echo "Tag written to the spec: \`$TAG\`" >> $GITHUB_STEP_SUMMARY
+
+  # Runs on every push that reaches this workflow, and it is meant to. The
+  # provisioner reads Dokploy before acting and applies only a real difference,
+  # so an unnecessary run costs ten seconds and reports "matches the spec".
+  # Deciding here what has changed would only duplicate, worse, what it already
+  # does.
+  deploy:
+    needs: [changes, build]
+    # A skipped `needs` skips the dependent job by default, and build is skipped
+    # on every push that leaves the image alone. Hence the explicit results:
+    # run unless something actually failed.
+    if: ${{ !cancelled() && needs.changes.result == 'success' && needs.build.result != 'failure' }}
+    runs-on: ubuntu-latest
+    # Holds the Dokploy secrets. Restrict this environment to main in the
+    # repository settings: a workflow on any other branch then cannot read them.
+    environment: production
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          # main, not the triggering commit: the build may have just committed a
+          # new tag on top of it, and that tag is what we are here to deploy.
+          ref: main
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 24
+
+      - name: Install the provisioner
+        working-directory: provision
+        # Pinned, and from the lockfile: this job holds a token to the whole
+        # Dokploy instance, and tsx runs dependency code with it in the
+        # environment. A surprise version bump is not a risk worth taking.
+        run: |
+          npm install -g pnpm@10.34.5
+          pnpm install --frozen-lockfile
+
+      - name: Reconcile Dokploy against the spec
+        working-directory: provision
+        env:
+          DOKPLOY_URL: ${{ secrets.DOKPLOY_URL }}
+          DOKPLOY_AUTH_TOKEN: ${{ secrets.DOKPLOY_AUTH_TOKEN }}
+          SE_ADMINS: ${{ secrets.SE_ADMINS }}
+        # No .env on the runner: env.ts only loads that file when it exists and
+        # reads process.env either way, so the variables above are enough.
+        run: pnpm run provision
