@@ -31,10 +31,15 @@ const planned = (what: string, action: string) => { changes++; console.log(`  ! 
  * Comments are stripped line by line before splitting on commas, and not the
  * other way round: a comma inside a comment would otherwise cut it into pieces
  * that no longer start with `#`, and each piece would be read as an id.
+ *
+ * Lines are split on `\r?\n` rather than `\n` because JavaScript's `.` excludes
+ * carriage returns: on a CRLF file `#.*$` cannot reach the end of a line and
+ * matches nothing, so every comment survives into the ids and the whole file is
+ * rejected. A Windows checkout produces exactly that.
  */
 function readIds(contents: string, where: string, what: string): string[] {
   const ids = contents
-    .split("\n")
+    .split(/\r?\n/)
     .map((line) => line.replace(/#.*$/, ""))
     .flatMap((line) => line.split(","))
     .map((s) => s.trim())
