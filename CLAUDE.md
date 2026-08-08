@@ -60,9 +60,10 @@ partie la plus fragile de l'image. Changer l'`ARG WINE_VERSION` et reconstruire 
 ## Anatomie
 
 ```
-image/          Dockerfile, entrypoint, injection du modpack
-server/         compose, configuration de référence, modpack
-provision/      provisionneur Dokploy idempotent
+image/            Dockerfile, entrypoint, injection du modpack
+server/           compose, configuration de référence, modpack
+server/world-seed/  le monde lui-même, en premade checkpoint
+provision/        provisionneur Dokploy idempotent
 ```
 
 **L'image porte le runtime, le volume porte les données.** Le prefix Wine et Torch sont dans
@@ -74,6 +75,35 @@ serveur en service, c'est le fichier du volume qui fait foi : l'écraser à chaq
 annulerait silencieusement les réglages faits en jeu. Le dépôt décrit comment démarre un serveur
 *neuf*.
 
+## Le monde est une graine, pas un scénario
+
+Le serveur ne joue pas un scénario de Keen : il joue un **système solaire composé à la main**,
+douze corps autour de Kerbin. Or **une planète ne se place qu'avec le menu de spawn créatif**, en
+caméra spectateur : c'est un geste de jeu, pas une configuration, donc le monde ne peut pas être
+généré depuis du code.
+
+Il voyage donc dans l'image comme **premade checkpoint**, et le jeu le recopie en monde vivant au
+premier démarrage, exactement comme il le faisait avec `Star System`. Réutiliser ce mécanisme plutôt
+que d'inventer une étape de déploiement était le point : c'est le chemin par lequel le serveur crée
+son monde depuis toujours.
+
+`server/world.md` porte la conception du système, les mesures et les décisions. Ce fichier-ci ne
+porte que la mécanique.
+
+**Le reset tient en trois gestes.** La graine est rafraîchie depuis l'image à chaque démarrage,
+puisque le jeu lit ce dossier et n'y écrit jamais. Après un test qui casse tout : arrêter le
+conteneur, supprimer `instance/Saves`, redémarrer. Le monde recréé est celui du dépôt.
+
+**Le piège qui coûte cher : une fois le monde créé, c'est lui qui décide.** La configuration dédiée
+ne sert qu'à sa création ; ensuite le serveur lit le `Sandbox_config.sbc` du monde. Un monde
+construit en solo arrive donc avec les défauts du menu de création, et les impose au serveur en
+silence : `OnlineMode` à `OFFLINE`, deux joueurs, des multiplicateurs de triple. **Aligner les
+paramètres de session du monde sur `server/config/` avant de régénérer la graine**, sur ses deux
+copies, `Sandbox.sbc` et `Sandbox_config.sbc`.
+
+La graine est déclarée `binary` dans `.gitattributes` : les `.vx2` sont des flux gzip que la
+conversion de fins de ligne corromprait.
+
 ## Le modpack comme code
 
 `server/modpack.txt` est la source de vérité : un identifiant Workshop par ligne. Le provisionneur
@@ -82,11 +112,12 @@ monde à chaque démarrage. **Ajouter un mod, c'est `nr provision`**, pas un fic
 
 Trois choses à savoir :
 
-- **L'ordre compte.** Quand deux mods touchent la même chose, celui du bas gagne. La liste n'est
-  jamais triée, ni ici, ni dans le provisionneur.
-- **Un monde neuf ignore les mods à son premier démarrage** : il n'existe pas encore au moment de
-  l'injection, il est créé ensuite depuis le scénario. Le premier lancement modé demande donc un
-  second démarrage.
+- **L'ordre compte**, deux fois plutôt qu'une. Quand deux mods touchent la même chose, celui du bas
+  gagne, donc la liste n'est jamais triée, ni ici, ni dans le provisionneur. Et les **frameworks vont
+  en tête** : un mauvais ordre est l'une des causes du `Reference issue detected` ci-dessous.
+- **La graine reçoit le modpack comme les mondes vivants.** L'ancienne règle « un monde neuf ignore
+  ses mods jusqu'au second démarrage » ne vaut plus : l'entrypoint patche aussi
+  `premade-world`, donc le monde naît avec son élément `<Mods>` déjà juste.
 - **Seul le Workshop Steam est admis.** Les mods mod.io exigent le crossplay, donc `NetworkType=eos`,
   ce qui change le réseau du serveur et met en jeu l'accès au Workshop. À rouvrir seulement si des
   joueurs console rejoignent.
@@ -184,6 +215,18 @@ directement au lieu de le confier à une enveloppe shell qui l'absorberait.
 La leçon commune à ces trois pièges : **un conteneur `Up` ne prouve rien**. Les trois se
 présentaient comme un conteneur en bonne santé sans serveur dedans. Le premier réflexe de diagnostic
 est `docker exec <nom> ps -ef`, pas la lecture des journaux.
+
+**`Reference issue detected`, à ne pas confondre avec un échec.** Au téléchargement des mods, le
+serveur écrit `Reference issue detected (circular reference or wrong order)`, une fois par mod que
+plusieurs autres déclarent en dépendance. **C'est un avertissement du résolveur, pas une erreur** :
+mesuré le 8 août 2026, les quatorze mods rapportent `k_EResultOK` juste après. Ce qui signalerait un
+vrai problème est `Unable to download mods. Result = Fail`, qui bloque tout le démarrage et pour
+lequel le remède connu est double : les DLL Steam à jour, que l'entrypoint fait déjà, et Torch, que
+nous utilisons. Chercher cette ligne-là, pas la première.
+
+Voir aussi `AutodetectDependencies`, à `true` : c'est lui qui résout les dépendances déclarées et
+produit ces boucles. Le passer à `false` rendrait le contrôle total à `modpack.txt`, au prix de
+devoir y déclarer chaque dépendance à la main.
 
 ## Quatre impasses sur l'arrêt propre, à ne pas rejouer
 

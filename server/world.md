@@ -8,15 +8,44 @@ Il existe parce que le monde est la seule partie du serveur que le dépôt ne pe
 entièrement : les positions des corps vivent dans un fichier de sauvegarde binaire, pas dans du code.
 `modpack.txt` dit *quels corps sont disponibles*, ce fichier dit *pourquoi et où*.
 
-**État : le système est composé, le monde n'est pas encore déployé.**
+**État : déployé et vérifié en service le 8 août 2026**, image `sha-86a8234`. Le monde `Pikmine`
+tourne sur pikmine avec ses douze corps et ses quatorze mods, en `Creative` le temps des tests.
 
-## Le monde se construit en local
+## Le monde se construit en local, puis voyage en graine
 
 Une planète ne se place qu'avec les outils créatifs, depuis le menu de spawn (`Shift+F10`), en caméra
-spectateur. C'est un geste de jeu, pas une configuration. Le dépôt ne reconstruit donc pas ce monde à
-partir de rien : il en décrit l'intention, et le monde initial est déposé une fois.
+spectateur. C'est un geste de jeu, pas une configuration, donc le monde ne peut pas être régénéré
+depuis du code. Il vit dans `server/world-seed/` et l'image le porte comme **premade checkpoint** :
+le jeu le recopie en monde vivant au premier démarrage. La mécanique est décrite dans le `CLAUDE.md`.
 
-Le monde de référence est `Monde vide 2026-08-07 14-56`, parti du preset **Empty World**.
+Il est né du preset **Empty World**, sur un poste de jeu, sous le nom `Monde vide 2026-08-07 14-56`.
+
+### Ce que le premier déploiement a vérifié
+
+| Vérification | Résultat |
+|---|---|
+| Monde créé depuis la graine | oui, nommé `Pikmine` |
+| Planètes | **12** |
+| Mods dans le monde en service | **14**, dans l'ordre de `modpack.txt` |
+| Téléchargements Workshop | **14 réussis, 0 échec** |
+| `OnlineMode` / `MaxPlayers` | `PUBLIC` / `8` |
+| `EnvironmentHostility` | `NORMAL` |
+| `SolarRadiationIntensity` | `1` |
+| `WeatherLightingDamage` | `true` |
+| `ProceduralDensity` | `0.35` |
+
+**Trente-six valeurs avaient dû être alignées avant de pousser la graine.** Un monde bâti en solo
+porte les défauts du menu de création et les impose au serveur, la configuration dédiée ne servant
+qu'à la création : sans cette passe, le serveur serait parti en `OFFLINE`, deux joueurs, et des
+multiplicateurs de triple. C'est le piège à ne pas réapprendre, et il est documenté dans le
+`CLAUDE.md`.
+
+**Une rencontre Factorum dort dans la graine**, à 3 880 km de Kerbin : un « Bio Research Facility »
+de 4 294 blocs, deux drones miniers, treize BioStalk et un module Prototech, soit 21 grids. Elle a
+spawné seule pendant la construction, ce qui apprend au passage que **`EnableEncounters=false` ne
+bloque pas les rencontres Factorum** : elles passent par un système de spawn distinct, piloté par
+`GlobalEncounterTimer`, `GlobalEncounterCap` et `EncounterDensity`. MES ne les gère pas non plus.
+Elle réapparaîtra donc à chaque reset, tant qu'on ne l'aura pas retirée de la graine.
 
 ## Le système
 
@@ -336,12 +365,31 @@ Ignis, Torvion, Umbris et Argus viennent de la même main, toutes mises à jour 
   des DLL Steam, que l'entrypoint fait déjà, et par Torch, que nous utilisons. Et
   `AutodetectDependencies=true` est le mécanisme qui produit ce genre de boucle quand plusieurs mods
   déclarent le même framework : à repasser à `false` si le symptôme apparaît.
-- **Aligner `modpack.txt`** sur les douze mods, dans l'ordre, frameworks en tête. L'entrypoint
-  réécrit l'élément `<Mods>` du monde à chaque démarrage depuis ce fichier : si les deux divergent, le
-  monde se casse au déploiement.
-- **Aligner les réglages du monde** sur ceux du serveur avant de déployer, notamment
-  `BlockLimitsEnabled` qui est à `GLOBALLY` dans le monde et `NONE` côté serveur.
-- **Construire le mécanisme de dépôt du monde** dans le volume `se-data`. Le dépôt n'en a aucun.
+- **Régler les créatures.** Décidé : MES seul, avec `OverrideVanillaCreatureSpawns` à `true` dans sa
+  configuration admin, plutôt que le mod séparé `Planet Creature Spawner` `2371761016` qui allume
+  exactement le même drapeau. MES scanne alors les planètes, récupère les créatures qu'elles
+  déclarent déjà et les fait spawner par son propre système, avec ses conditions de météo, de terrain
+  et de score de menace, plus une liste noire par planète. Cette configuration vit dans le `Storage`
+  du monde, donc elle se fait **sur le serveur**.
+- **Décider du contenu de rencontres au-delà d'Abandoned Settlements**, qui ne peuple que les
+  planètes à atmosphère.
+- **Nettoyer ou garder la rencontre Factorum** présente dans la graine.
 - **Vérifier en jeu** : la visibilité d'Ignis et d'Argus à 6 000 et 8 800 km, le puits de gravité de
   la géante autour de Tohil, la pondération des ressources de l'anneau, et la calibration de
   `SolarRadiationIntensity`.
+- **Basculer en `Survival`** quand les tests seront finis.
+
+## Régénérer la graine après une modification du monde
+
+Le monde vivant du serveur et la graine du dépôt sont deux choses distinctes. Modifier le système
+suppose de refaire le trajet complet :
+
+1. récupérer ou rouvrir le monde sur un poste de jeu, y faire les changements ;
+2. **aligner ses paramètres de session** sur `server/config/SpaceEngineers-Dedicated.cfg`, sur
+   `Sandbox.sbc` et `Sandbox_config.sbc` ;
+3. recopier le dossier dans `server/world-seed/`, **sans le dossier `Backup/`** qui pèse cinq fois le
+   monde, et sans `SANDBOX_0_0_0_.sbsB5` ;
+4. vérifier qu'aucun Steam64 n'y figure, le dépôt étant public ;
+5. commiter : le workflow reconstruit l'image, puisque `server/world-seed/**` est dans ses chemins ;
+6. pointer `specs.ts` sur le nouveau tag et provisionner ;
+7. sur le serveur, supprimer `instance/Saves` pour que le monde soit recréé depuis la graine.
