@@ -1,8 +1,8 @@
 # Builds the server image and publishes it to GHCR.
 #
-# Nothing here deploys. The provisioner decides which tag runs, so a build is
-# only ever "a new candidate exists": bumping SE_IMAGE_TAG in specs.ts and
-# running the provisioner is a separate, deliberate act.
+# Nothing here deploys. A build writes the new tag into provision/src/specs.ts
+# and commits it, which only records that a candidate exists: pulling that
+# commit and running the provisioner is a separate, deliberate act.
 #
 # The build takes a while, most of it installing .NET Framework 4.8 into the
 # Wine prefix. Paths are filtered so a documentation change does not spend
@@ -27,7 +27,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      # write, not read: the last step commits the new tag back to main.
+      contents: write
       packages: write
     steps:
       - uses: actions/checkout@v4
@@ -63,9 +64,55 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Tag to deploy
+      # Writing the tag by hand was the one manual step left in the loop, and the
+      # one that made every build leave an uncommitted diff behind.
+      #
+      # This commit does not retrigger the workflow, twice over: provision/ is
+      # not in the paths filter above, and pushes made with GITHUB_TOKEN do not
+      # start workflow runs at all.
+      - name: Write the deployable tag into the spec
+        # Only from main. A build from anywhere else is not a deployment
+        # candidate, which is also why `latest` is restricted to the default
+        # branch above.
+        if: github.ref == 'refs/heads/main'
         run: |
-          echo "Set SE_IMAGE_TAG in provision/src/specs.ts to:" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "sha-$(git rev-parse --short HEAD)" >> $GITHUB_STEP_SUMMARY
+          # Read the tag off the metadata action rather than recomputing it:
+          # `git rev-parse --short` widens the abbreviation when it has to,
+          # while type=sha always truncates to the same 7 characters. The
+          # `version` output is no use here, it resolves to `latest`, whose
+          # priority outranks the sha tag.
+          TAG=$(printf '%s\n' "${{ steps.meta.outputs.tags }}" | sed -n 's/^.*:\(sha-.*\)$/\1/p' | head -n1)
+          if [ -z "$TAG" ]; then
+            echo "::error::no sha- tag in the metadata output"
+            exit 1
+          fi
+
+          # main may have moved during the build, which takes about twenty
+          # minutes. Checkout left us on the triggering commit, which is what the
+          # image was built from, but not what we can push onto.
+          git fetch origin main
+          git checkout -B main origin/main
+
+          sed -i "s/imageTag: \"[^\"]*\"/imageTag: \"$TAG\"/" provision/src/specs.ts
+          # A silent no-op here would read as "nothing to deploy" on the next
+          # run, so a spec that no longer carries the field is an error.
+          if ! grep -q "imageTag: \"$TAG\"" provision/src/specs.ts; then
+            echo "::error::imageTag not found in provision/src/specs.ts"
+            exit 1
+          fi
+
+          if git diff --quiet -- provision/src/specs.ts; then
+            echo "Spec already at \`$TAG\`, nothing to commit." >> $GITHUB_STEP_SUMMARY
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add provision/src/specs.ts
+          git commit -m "chore(provision): deploy $TAG"
+          git push origin main
+
+          echo "Candidate written to the spec: \`$TAG\`" >> $GITHUB_STEP_SUMMARY
+          echo '```sh' >> $GITHUB_STEP_SUMMARY
+          echo "git pull && cd provision && nr provision" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

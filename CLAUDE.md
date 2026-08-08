@@ -156,10 +156,12 @@ En contrepartie, promouvoir quelqu'un depuis le jeu ne survit pas à un redémar
 ## Déploiement
 
 Image construite par GitHub Actions et publiée sur GHCR, déploiement par le provisionneur. Une
-construction ne déploie rien : elle rend un candidat disponible, et c'est le tag écrit dans
-`specs.ts` qui décide de ce qui tourne.
+construction ne déploie rien : elle **écrit le tag qu'elle vient de produire dans `specs.ts` et le
+commit**, ce qui rend un candidat disponible, sans plus. Le déploiement reste un geste séparé, d'où
+le `git pull` en tête.
 
 ```sh
+git pull           # récupère le tag écrit par la dernière construction
 cd provision
 ni                 # installe les dépendances
 nr plan            # montre l'écart, ne change rien
@@ -167,7 +169,9 @@ nr provision       # applique
 ```
 
 Le provisionneur lit l'état avant d'agir, n'agit que sur une différence réelle et **ne supprime
-jamais rien** : vider la spec laisse le serveur tourner plutôt que de perdre un monde.
+jamais rien** : vider la spec laisse le serveur tourner plutôt que de perdre un monde. Corollaire à
+connaître sur le tag : c'est son changement qui produit la différence. Le figer, à `latest` par
+exemple, ne coûterait pas seulement la traçabilité, ça empêcherait tout redéploiement.
 
 ## Coordonnées
 

@@ -21,9 +21,12 @@ export type Spec = {
    * Image tag to run.
    *
    * Always an immutable `sha-…` tag produced by the build workflow, never
-   * `latest`: the point of writing it here is that the deployed version is
-   * readable from the repository, and a moving tag would defeat that. Deploying
-   * a new build means changing this line.
+   * `latest`. Two reasons rather than one: the deployed version stays readable
+   * from the repository, and the provisioner only redeploys on a difference, so
+   * a tag that never changed would never ship anything either.
+   *
+   * The build workflow writes this line and commits it, so a build leaves a
+   * candidate here. Deploying it stays a separate act: pull, then provision.
    */
   imageTag: string;
 };
