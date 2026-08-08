@@ -195,6 +195,20 @@ else
   done
 fi
 
+# --- 7b. Declared settings ---------------------------------------------------
+# Session settings and the MES admin configuration, pushed back like the modpack
+# and the admin list. Before this, the MES configuration lived only in the
+# world's Storage, which nothing here touched: deleting instance/Saves restored
+# its defaults in silence, so the documented three-gesture reset quietly undid
+# the global NPC ceiling and the creature override along with the world.
+if [ ${#WORLDS[@]} -gt 0 ]; then
+  WORLD_DIRS=()
+  for cfg in "${WORLDS[@]}"; do
+    WORLD_DIRS+=("$(dirname "${cfg}")")
+  done
+  python3 /opt/bin/inject-settings.py /opt/base/overrides.txt "${WORLD_DIRS[@]}"
+fi
+
 # --- 8. Run ------------------------------------------------------------------
 # Xvfb is started by hand rather than through xvfb-run, and that is not a matter
 # of taste. As PID 1, the xvfb-run script blocks forever in sigsuspend: the

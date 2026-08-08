@@ -1,0 +1,40 @@
+# Settings pushed back onto every world at every start.
+#
+#   <target>.<setting> = <value>
+#
+# Targets:
+#   world        the world files themselves, Sandbox.sbc and Sandbox_config.sbc
+#   mes.<File>   Modular Encounters Systems, Config-<File>.xml in the world Storage
+#
+# This file is the opposite of the .cfg files beside it. Those describe how a
+# fresh server starts and are copied only when the volume has none; these lines
+# are reapplied on every start. So a value changed in game, or through a
+# /MES.Settings chat command, is undone at the next restart: try things live,
+# then write down what you want to keep here.
+#
+# It exists because the MES configuration lived only in the world's Storage,
+# which nothing in this repository touched. Deleting instance/Saves therefore
+# restored MES defaults in silence, and the three-gesture reset would have
+# undone every setting below without a word.
+#
+# A setting that is absent from a file is never inserted, only rewritten in
+# place: the .NET serialiser reads these elements in sequence, so a new element
+# in the wrong position corrupts the file with nothing to report it. And a world
+# created on this very start has no MES Storage yet, so its mes. lines only land
+# on the following start.
+
+# Pirate antennas, the system MES encounters use to call in reinforcements. The
+# MES encounter guide asks for this one explicitly.
+world.EnableDrones = true
+
+# Without this there is no global ceiling on NPC grids at all: MaxGlobalNpcGrids
+# sits at 50 doing nothing. On a single-threaded host whose behaviour under load
+# has never been measured, with four encounter packs feeding the same spawn
+# type, it is the only global guard that exists.
+mes.General.UseMaxNpcGrids = true
+
+# MES scans the planets, picks up the creatures they already declare and spawns
+# them through its own system, with its own weather, terrain and threat score
+# conditions. The world keeps EnableSpiders and EnableWolfs off, so until this
+# is on there is no creature anywhere.
+mes.Creatures.OverrideVanillaCreatureSpawns = true

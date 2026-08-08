@@ -127,6 +127,32 @@ collecte. Elle existe parce que les données Steam trompent : les dépendances d
 absentes alors que la description les nomme, et le Workshop héberge sous la même forme d'URL des
 scripts in-game et des blueprints, qui n'ont rien à faire dans `<Mods>`.
 
+## Les réglages sont du code, eux aussi
+
+`server/config/overrides.txt` déclare des réglages **réappliqués à chaque démarrage**, sur les mondes
+vivants comme sur la graine. C'est le pendant de `modpack.txt` pour ce qui n'est pas une liste de
+mods : les paramètres de session du monde, et la configuration d'administration de Modular Encounters
+Systems.
+
+Il existe parce qu'il manquait une pièce. **La configuration de MES vit dans le `Storage` du monde**,
+que rien dans ce dépôt ne touchait : le reset en trois gestes ramenait donc les défauts de MES en
+silence, plafond global de grids compris. Le monde, lui, impose ses paramètres de session dès qu'il
+existe, ce qui avait déjà coûté l'alignement de trente-six valeurs à la main avant le premier
+déploiement.
+
+Trois choses à savoir :
+
+- **Un réglage fait en jeu ne survit pas au redémarrage**, y compris posé par commande de chat
+  `/MES.Settings…`. C'est exactement le prix payé pour les administrateurs, et c'est voulu : essayer
+  en direct, puis écrire ici ce qu'on garde.
+- **Un réglage absent du fichier cible n'est jamais créé**, seulement réécrit sur place. Le
+  sérialiseur .NET lit ces éléments en séquence, donc un élément inséré au mauvais endroit corrompt
+  le fichier sans que rien ne le signale. Un monde né au démarrage courant n'a pas encore de
+  `Storage`, donc ses lignes `mes.` n'arrivent qu'au démarrage suivant.
+- **Les fichiers de MES mentent sur leur encodage** : ils déclarent `utf-16` et sont physiquement en
+  UTF-8 sans BOM, comme le `Config.xml` de Real Gas Giants. L'injection les lit et les réécrit en
+  UTF-8 sans toucher à la déclaration, qui est ce que MES relit.
+
 ## Personne n'a de DLC, et ça ne ferme presque rien
 
 Aucun joueur du groupe ne possède de DLC. Ça ne se traduit pas par du contenu absent : les **716

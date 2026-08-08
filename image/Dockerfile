@@ -111,7 +111,8 @@ COPY --chown=se:se server/config/ /opt/base/
 # copies into a live world on first start, the same way it does with Keen's own
 # scenarios. Around 3 MB, mostly the sector file.
 COPY --chown=se:se server/world-seed/ /opt/base-world/
-COPY --chown=se:se image/entrypoint.sh image/inject-mods.py image/inject-admins.py /opt/bin/
+COPY --chown=se:se image/entrypoint.sh image/inject-mods.py image/inject-admins.py \
+     image/inject-settings.py /opt/bin/
 
 WORKDIR /data
 # Invoked through bash rather than relying on the executable bit, which does

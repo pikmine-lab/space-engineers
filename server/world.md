@@ -403,18 +403,21 @@ Ignis, Torvion, Umbris et Argus viennent de la même main, toutes mises à jour 
   des DLL Steam, que l'entrypoint fait déjà, et par Torch, que nous utilisons. Et
   `AutodetectDependencies=true` est le mécanisme qui produit ce genre de boucle quand plusieurs mods
   déclarent le même framework : à repasser à `false` si le symptôme apparaît.
-- **Régler les créatures.** Décidé : MES seul, avec `OverrideVanillaCreatureSpawns` à `true` dans sa
-  configuration admin, plutôt que le mod séparé `Planet Creature Spawner` `2371761016` qui allume
-  exactement le même drapeau. MES scanne alors les planètes, récupère les créatures qu'elles
-  déclarent déjà et les fait spawner par son propre système, avec ses conditions de météo, de terrain
-  et de score de menace, plus une liste noire par planète. Cette configuration vit dans le `Storage`
-  du monde, donc elle se fait **sur le serveur**.
-- **Régler MES avant que les rencontres n'arrivent en nombre.** Sa configuration vit dans le
-  `Storage` du monde, donc sur le serveur. Deux réglages à peser dans
-  `Config-PlanetaryInstallations.xml` : `MaxShipsPerArea` à 10 par zone de 15 km, et surtout le
-  nettoyage, qui retire un grid MES à 50 km ou après une heure, et **à 25 km au bout de 15 minutes
-  s'il n'est pas alimenté**. C'est le mécanisme derrière les épaves réclamées qui disparaissent, un
-  symptôme rapporté sur Planetary Derelicts.
+- **Vérifier les créatures en jeu.** `OverrideVanillaCreatureSpawns` est passé à `true` par
+  `overrides.txt`, décision prise ici de longue date mais jamais appliquée : MES scanne les planètes,
+  récupère les créatures qu'elles déclarent et les fait spawner par son propre système, avec ses
+  conditions de météo, de terrain et de score de menace. Le mod séparé `Planet Creature Spawner`
+  `2371761016` reste inutile, il n'allume que ce même drapeau. Reste à voir ce que ça donne sur
+  Satreus et Nivis, qui sont les seules à déclarer une faune.
+- **Trancher le nettoyage des rencontres.** MES retire un grid à 50 km ou après une heure, et **à
+  25 km au bout de 15 minutes tant qu'il n'a pas de courant**. Or seul Abandoned Settlements protège
+  ses grids, par `IgnoreCleanupRules` sur 109 de ses 119 spawngroups : Planetary Derelicts et Lost
+  Colony n'en protègent aucun, Wasteland neuf sur 87. Sur un serveur de récupération, c'est le
+  réglage qui décide si ce qu'un joueur trouve lui reste. Leviers dans
+  `Config-PlanetaryInstallations.xml` : `CleanupUnpoweredTimerTrigger`,
+  `CleanupUnpoweredDistanceTrigger`, ou `CleanupUseTimer` à `false`.
+- **Mesurer la densité en jeu.** `MaxShipsPerArea` vaut 10 par zone de 15 km pour les installations
+  planétaires, avec quatre packs qui alimentent ce seul type. Rien ne dit encore si c'est trop.
 - **Nettoyer ou garder la rencontre Factorum** présente dans la graine.
 - **Vérifier en jeu** : la visibilité d'Ignis et d'Argus à 6 000 et 8 800 km, le puits de gravité de
   la géante autour de Tohil, la pondération des ressources de l'anneau, et la calibration de
