@@ -44,7 +44,7 @@
 3343005457   # Ignis - five jumps out, molten, the far edge
 
 # --- Blocks -----------------------------------------------------------------
-# Building blocks, above the encounters because the SWORD prefabs below are
+# The first two sit above the encounters because the SWORD prefabs below are
 # built with their shapes. Steam declares no dependency for either one: the
 # author names them in his own comments, and without them those ships spawn
 # with holes. Players get the blocks as well, which is a side effect and not
@@ -52,6 +52,29 @@
 # repository; P.O.M has no public source, so its count is assumed, not measured.
 1939935505   # AQD - Armor Expansion - 21 armor shapes, large and small, light and heavy
 2943729620   # P.O.M - XL Blocks - 26 non-deforming 5x5x5 blocks, last updated April 2024
+#
+# The ones below are for the players only, nothing above spawns them. Two counts
+# were made in enenra/aqdse rather than assumed, since both fail silently: none
+# of these declares a voxel material, so the 66 free slots stay untouched, and no
+# block definition of theirs carries a <DLC> tag, so every one can be placed.
+# AQD - Concrete was dropped on that second count, its 72 blocks all being tagged
+# <DLC>ScrapRace</DLC> when nobody in the group owns Wasteland.
+#
+# Age reads wrong here: half of them went untouched for two years, yet the
+# repository was pushed to on 2 August 2026 and Upgradeable Gyroscopes got a
+# "Fix for 1.210" on 27 July. The decorative ones simply had nothing to fix.
+# Gyroscopes comes last of the group, being the only one to override a vanilla
+# definition, and Airlock Connectors is the one to watch: six script files, no
+# update since March 2025, and a lone report of its large connector breaking on
+# 4 August 2026, right after a game update. If they refuse to lock, start there.
+3382116691   # AQD - Markings - 15 floor markings, no collision, tied to the block beneath
+2819404116   # AQD - Tarps & Nets - 13 tarps, cargo nets and the pillars to hold them
+2492809392   # AQD - Sleek Corridors - 6 large grid passage blocks
+3437815208   # AQD - Airlock Connectors - airtight docking without merge blocks
+2678657382   # AQD - Small Grid Expansion - 7 large grid blocks brought to small grid
+3768506853   # Humanoid's Retro Command Module - Apollo styled small grid cockpit
+3770315903   # Humanoid's Retractable Solar Panels - a door that generates power, scripted
+2621169600   # AQD - Upgradeable Gyroscopes - one 3x3x3 gyro, boosters and upgrade modules
 
 # --- Encounters -------------------------------------------------------------
 # Content for the spawn engine, therefore after it. None of them overrides
