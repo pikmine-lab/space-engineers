@@ -127,6 +127,26 @@ collecte. Elle existe parce que les données Steam trompent : les dépendances d
 absentes alors que la description les nomme, et le Workshop héberge sous la même forme d'URL des
 scripts in-game et des blueprints, qui n'ont rien à faire dans `<Mods>`.
 
+## Personne n'a de DLC, et ça ne ferme presque rien
+
+Aucun joueur du groupe ne possède de DLC. Ça ne se traduit pas par du contenu absent : les **716
+définitions de blocs marquées `<DLC>`**, sur les 1 503 du jeu et réparties en 21 packs, sont
+**livrées avec le jeu de base comme avec le serveur dédié**. Vérifié sur pikmine :
+`Content/Data/CubeBlocks/CubeBlocks_Frostbite.sbc` est bien dans l'installation du serveur. La
+licence ne débloque que le geste de poser le bloc, elle ne livre aucun fichier.
+
+Le serveur n'a donc besoin d'aucun DLC, et **un mod dont les prefabs emploient des blocs DLC spawne
+normalement** : c'est le serveur qui les fait apparaître, sans propriétaire. Ce qu'une épave
+récupérée apporte se pilote, s'utilise et se démonte comme le reste.
+
+Ce qui reste fermé tient en deux gestes : **poser un bloc DLC neuf**, et **souder au projecteur un
+blueprint qui en contient**. Un vaisseau trouvé avec un *Gate* Frostbite s'utilise donc, mais ne se
+reproduit jamais. La réparation d'un bloc DLC existant est annoncée possible, avec des signalements
+de soudeuses qui refusent quand la grille n'appartient pas au joueur : à confirmer en jeu.
+
+Conséquence pour l'examen d'un mod : **les blocs DLC ne sont pas un motif d'écart**. Un pack de
+rencontres bâti sur le Decorative Pack ou sur Frostbite fonctionne ici entièrement.
+
 ## Scripts
 
 Le serveur tourne en **`ExperimentalMode`**, avec **`EnableIngameScripts`** : les blocs programmables

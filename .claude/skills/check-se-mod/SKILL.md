@@ -128,6 +128,10 @@ prétendre vérifié.
 Pour chaque mod, trois issues et rien d'autre : **retenu**, **retenu sous condition** (en nommant la
 condition : une dépendance à ajouter d'abord, un mod à retirer), ou **écarté** avec le motif.
 
+**Les blocs DLC ne sont jamais un motif d'écart**, et personne ici n'en possède : leurs définitions
+sont livrées avec le jeu de base comme avec le serveur dédié, donc les prefabs qui en emploient
+spawnent normalement. Le détail est dans le `CLAUDE.md`.
+
 Le serveur tourne en `ExperimentalMode`, avec les scripts in-game autorisés : les mods porteurs de
 code sont donc admis. Ils restent plus fragiles que les mods de blocs purs, puisqu'ils dépendent
 d'une API qui bouge à chaque mise à jour du jeu. C'est un facteur de risque à peser, pas un motif
