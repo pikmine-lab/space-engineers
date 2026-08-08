@@ -27,6 +27,8 @@
 3218645300   # Asteroid Filter API
 1521905890   # Modular Encounters Systems - spawn engine, adds nothing by itself
 3232085677   # Real Gas Giants - needs the three APIs above
+1965654081   # Rich HUD Master - GUI framework, drawn client side but runs here too
+2754014019   # Scope Framework - hand weapon scopes, code only, no definitions of its own
 
 # --- The system -------------------------------------------------------------
 # Listed outward from Kerbin, which sits at the origin. Each defines its own
@@ -74,6 +76,18 @@
 2617194602   # Lost Colony + Frostbite - grass, sand and snow only
 2539299261   # Wasteland Encounters V2 - rusted wrecks, tied to no planet
 3694295503   # SWORD Faction MES - hostile navy, space only, from 300 threat level
+
+# --- Tools ------------------------------------------------------------------
+# Character tools, and the wheel that reaches them. Terrain Tool is the only
+# one that costs anything at runtime: placing voxels is server work, and it is
+# also the only mod here that claims a voxel material slot, Concrete, measured
+# in the downloaded mod. Easy Tool Access returns immediately on a dedicated
+# server, but a client loads the world mod list and nothing of its own, so it
+# still has to be listed. It comes last, being the one that recognises the
+# others.
+2820001381   # Terrain Tool - places every vanilla terrain type, built on Digi's Concrete Tool
+2777644246   # Binoculars - needs Scope Framework above
+3707426899   # AQD - Easy Tool Access - tool wheel on one hotbar slot, needs Rich HUD Master
 
 # --- Ambience ---------------------------------------------------------------
 # Both are drawn by the client and cost the server nothing at runtime. They
