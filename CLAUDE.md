@@ -60,8 +60,8 @@ partie la plus fragile de l'image. Changer l'`ARG WINE_VERSION` et reconstruire 
 ## Anatomie
 
 ```
-image/            Dockerfile, entrypoint, injection du modpack
-server/           compose, configuration de référence, modpack
+image/            Dockerfile, entrypoint, injection du modpack, des admins et des réglages
+server/           compose, configuration de référence, modpack, réglages réappliqués
 server/world-seed/  le monde lui-même, en premade checkpoint
 provision/        provisionneur Dokploy idempotent
 ```
@@ -74,6 +74,12 @@ La configuration de `server/config/` n'est **recopiée que si le volume n'en a p
 serveur en service, c'est le fichier du volume qui fait foi : l'écraser à chaque démarrage
 annulerait silencieusement les réglages faits en jeu. Le dépôt décrit comment démarre un serveur
 *neuf*.
+
+**`overrides.txt` est l'exception, et elle est délibérée.** Ce fichier vit dans le même dossier et
+suit la règle inverse : ses lignes sont réappliquées à chaque démarrage. Les deux régimes cohabitent
+parce qu'ils ne portent pas la même chose. Les `.cfg` décrivent un point de départ, puis laissent le
+volume gouverner ; `overrides.txt` déclare le petit nombre de valeurs qu'on ne veut jamais voir
+dériver, au même titre que le modpack et la liste des administrateurs.
 
 ## Le monde est une graine, pas un scénario
 
@@ -93,6 +99,11 @@ porte que la mécanique.
 **Le reset tient en trois gestes.** La graine est rafraîchie depuis l'image à chaque démarrage,
 puisque le jeu lit ce dossier et n'y écrit jamais. Après un test qui casse tout : arrêter le
 conteneur, supprimer `instance/Saves`, redémarrer. Le monde recréé est celui du dépôt.
+
+**Il tourne en revanche un démarrage entier avec les défauts de Modular Encounters Systems.** Le
+`Storage` du monde n'existe pas encore au moment où les réglages sont injectés, donc `overrides.txt`
+n'a rien où écrire : ni plafond global de grids, ni créatures, et le nettoyage à quinze minutes. Un
+second redémarrage les pose. C'est l'ancienne règle des mods, qui elle a disparu.
 
 **Le piège qui coûte cher : une fois le monde créé, c'est lui qui décide.** La configuration dédiée
 ne sert qu'à sa création ; ensuite le serveur lit le `Sandbox_config.sbc` du monde. Un monde

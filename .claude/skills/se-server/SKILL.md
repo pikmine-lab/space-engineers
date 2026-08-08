@@ -87,9 +87,14 @@ S'il ne reste que `Xvfb` et l'entrypoint, le jeu est mort et les journaux ne le 
 **Lire, toujours.** C'est sans risque et c'est le but de cette skill.
 
 **Écrire, presque jamais.** La configuration du volume fait foi et n'est pas versionnée : ce qu'on y
-change échappe au dépôt et disparaîtra au prochain reset du monde. Un réglage qui doit tenir passe
-par le dépôt et par `nr provision`. Écrire directement ne se justifie que pour un test, en le disant,
-et en sachant que c'est éphémère.
+change échappe au dépôt et disparaîtra au prochain reset du monde. Écrire directement ne se justifie
+que pour un test, en le disant, et en sachant que c'est éphémère.
+
+Deux réserves valent d'être connues avant de toucher quoi que ce soit ici. Les valeurs déclarées
+dans `server/config/overrides.txt` sont **réappliquées à chaque démarrage**, donc les modifier dans
+le volume, ou par commande de chat `/MES.Settings…`, ne tient que jusqu'au prochain redémarrage. Et
+les fichiers de configuration de MES sont **réécrits par MES lui-même** pendant qu'il tourne : les
+éditer sur un serveur en service, c'est écrire dans un fichier qui sera écrasé.
 
 **Redémarrer ou arrêter, jamais sans demander.** L'arrêt déclenche la sauvegarde par `SIGINT`, qui
 **n'aboutit pas à tous les coups** : c'est une limite connue et non résolue. Un redémarrage peut donc
