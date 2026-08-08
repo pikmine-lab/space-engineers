@@ -38,3 +38,12 @@ mes.General.UseMaxNpcGrids = true
 # conditions. The world keeps EnableSpiders and EnableWolfs off, so until this
 # is on there is no creature anywhere.
 mes.Creatures.OverrideVanillaCreatureSpawns = true
+
+# An unpowered NPC grid is cleaned up after 15 minutes, against an hour for a
+# powered one, and only Abandoned Settlements shields its own: 109 of its 119
+# spawngroups carry IgnoreCleanupRules, where Planetary Derelicts and Lost
+# Colony carry none and Wasteland nine out of 87. On a salvage server this is
+# the setting that decides whether what a player finds stays theirs, so the
+# unpowered case is put back in line with the general one. Distance still
+# applies: 25 km for an unpowered grid, 50 km otherwise.
+mes.PlanetaryInstallations.CleanupUnpoweredTimerTrigger = 3600
