@@ -27,6 +27,14 @@
 # MES encounter guide asks for this one explicitly.
 world.EnableDrones = true
 
+# The economy layer: NPC stations that buy, sell and post contracts. The seed
+# already carries the ten generated trade factions and the 59 stations they were
+# dealt, five of them pirate, every one still at StationEntityId 0 because the
+# world was composed with the economy off. Nothing regenerates that placement,
+# so this line is the whole difference between stations on paper and stations a
+# player can dock at.
+world.EnableEconomy = true
+
 # Without this there is no global ceiling on NPC grids at all: MaxGlobalNpcGrids
 # sits at 50 doing nothing. On a single-threaded host whose behaviour under load
 # has never been measured, with four encounter packs feeding the same spawn
